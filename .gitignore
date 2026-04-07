@@ -1,0 +1,8 @@
+data/
+secrets/
+config.yaml
+recurring.yaml
+__pycache__/
+*.pyc
+.env
+.claude/

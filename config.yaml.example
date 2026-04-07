@@ -1,0 +1,80 @@
+plaid:
+  client_id: "your_plaid_client_id"
+  secret: "your_plaid_secret"
+  environment: "development"  # sandbox | development | production
+
+accounts:
+  checking:
+    plaid_item: "capital_one"
+    account_name: "360 Checking"  # substring match against Plaid account name
+
+  credit_cards:
+    # Capital One cards (all under same login/item)
+    - name: "Savor"
+      plaid_item: "capital_one"
+      account_name: "Savor"
+      payment_day: 15
+      payment_strategy: "statement_balance"  # statement_balance | min_payment | current_balance
+
+    - name: "Venture"
+      plaid_item: "capital_one"
+      account_name: "Venture"
+      payment_day: 22
+      payment_strategy: "statement_balance"
+
+    - name: "Venture X"
+      plaid_item: "capital_one"
+      account_name: "Venture X"
+      payment_day: 22
+      payment_strategy: "statement_balance"
+
+    # Chase cards - login #1 (United + Marriott)
+    - name: "United"
+      plaid_item: "chase_1"
+      account_name: "United"
+      payment_day: 5
+      payment_strategy: "statement_balance"
+
+    - name: "Marriott"
+      plaid_item: "chase_1"
+      account_name: "Marriott"
+      payment_day: 10
+      payment_strategy: "statement_balance"
+
+    # Chase cards - login #2 (Prime)
+    - name: "Prime"
+      plaid_item: "chase_2"
+      account_name: "Prime"
+      payment_day: 18
+      payment_strategy: "statement_balance"
+
+    # Bank of America
+    - name: "BofA Card"
+      plaid_item: "bofa"
+      account_name: "Cash Rewards"  # adjust to match your Plaid account name
+      payment_day: 25
+      payment_strategy: "statement_balance"
+
+    # Citi
+    - name: "Citi Card"
+      plaid_item: "citi"
+      account_name: "Custom Cash"  # adjust to match your Plaid account name
+      payment_day: 28
+      payment_strategy: "statement_balance"
+
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username: "your_email@gmail.com"
+  password: "your_app_password"
+  from: "your_email@gmail.com"
+  to: "your_email@gmail.com"
+
+thresholds:
+  low_balance_warning: 5000
+
+digest:
+  projection_days_detail: 14    # daily detail rows in email
+  projection_days_lowpoint: 60  # horizon for low-balance scan
+
+data_dir: "./data"  # use /app/data when running in Docker

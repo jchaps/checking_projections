@@ -1,0 +1,65 @@
+transactions:
+  # ---- Income / Credits ----
+
+  - name: "Paycheck"
+    type: "credit"
+    amount: 3500.00
+    frequency: "biweekly"
+    anchor_date: "2026-01-09"  # a known payday; future dates computed every 14 days from here
+    match:
+      name_contains: "DIRECT DEP"  # substring to match in Plaid transaction name
+      amount_tolerance: 50.00      # paycheck might vary slightly
+      date_tolerance_days: 3       # match if posted within +/- 3 days of expected
+
+  # ---- Bills / Debits ----
+
+  - name: "Rent"
+    type: "debit"
+    amount: 2100.00
+    frequency: "monthly"
+    day: 1
+    match:
+      name_contains: "ZELLE"
+      amount_tolerance: 0
+
+  - name: "Electric"
+    type: "debit"
+    amount_range: [80, 180]  # variable bill; projection uses midpoint ($130)
+    frequency: "monthly"
+    day: 15
+    match:
+      name_contains: "COMED"
+      amount_tolerance: 50.00
+
+  - name: "Internet"
+    type: "debit"
+    amount: 75.00
+    frequency: "monthly"
+    day: 20
+    match:
+      name_contains: "FIOS"
+      amount_tolerance: 5.00
+
+  - name: "Car Insurance"
+    type: "debit"
+    amount: 150.00
+    frequency: "monthly"
+    day: 28
+    match:
+      name_contains: "GEICO"
+      amount_tolerance: 10.00
+
+  # ---- Twice Monthly Example ----
+
+  # - name: "Gym"
+  #   type: "debit"
+  #   amount: 14.99
+  #   frequency: "twice_monthly"
+  #   days: [1, 15]
+  #   match:
+  #     name_contains: "PLANET FIT"
+  #     amount_tolerance: 0
+
+  # Note: Credit card payments are NOT listed here.
+  # They are auto-generated from config.yaml credit card definitions
+  # using the latest statement balance / min payment from Plaid.
