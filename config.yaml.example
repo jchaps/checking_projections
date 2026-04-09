@@ -13,68 +13,70 @@ accounts:
     - name: "Savor"
       plaid_item: "capital_one"
       account_name: "Savor"
-      payment_day: 15
       payment_strategy: "statement_balance"  # statement_balance | min_payment | current_balance
 
     - name: "Venture"
       plaid_item: "capital_one"
       account_name: "Venture"
-      payment_day: 22
       payment_strategy: "statement_balance"
 
     - name: "Venture X"
       plaid_item: "capital_one"
       account_name: "Venture X"
-      payment_day: 22
       payment_strategy: "statement_balance"
 
     # Chase cards - login #1 (United + Marriott)
     - name: "United"
       plaid_item: "chase_1"
       account_name: "United"
-      payment_day: 5
       payment_strategy: "statement_balance"
 
     - name: "Marriott"
       plaid_item: "chase_1"
       account_name: "Marriott"
-      payment_day: 10
       payment_strategy: "statement_balance"
 
     # Chase cards - login #2 (Prime)
-    - name: "Prime"
+    - name: "Amazon Prime"
       plaid_item: "chase_2"
-      account_name: "Prime"
-      payment_day: 18
+      account_name: "Amazon"
       payment_strategy: "statement_balance"
 
     # Bank of America
-    - name: "BofA Card"
+    - name: "Bank of America"
       plaid_item: "bofa"
-      account_name: "Cash Rewards"  # adjust to match your Plaid account name
-      payment_day: 25
+      account_name: "Premium Rewards"
       payment_strategy: "statement_balance"
 
     # Citi
-    - name: "Citi Card"
+    - name: "Citi AAdvantage"
       plaid_item: "citi"
-      account_name: "Custom Cash"  # adjust to match your Plaid account name
-      payment_day: 28
+      account_name: "AAdvantage"
       payment_strategy: "statement_balance"
 
 smtp:
-  host: "smtp.gmail.com"
-  port: 587
-  username: "your_email@gmail.com"
+  host: "smtp.fastmail.com"
+  port: 465
+  username: "you@example.com"
   password: "your_app_password"
-  from: "your_email@gmail.com"
-  to: "your_email@gmail.com"
+  from: "you@example.com"
+  to: "you@example.com"
 
 thresholds:
   low_balance_warning: 5000
 
+schedule:
+  sync:
+    days: "mon,wed,sat"
+    hour: 10
+    minute: 0
+  digest:
+    days: "sat"
+    hour: 10
+    minute: 5
+
 digest:
-  projection_days_detail: 14    # daily detail rows in email
-  projection_days_lowpoint: 60  # horizon for low-balance scan
+  projection_days_detail: 30    # detail rows in email (transaction days only)
+  projection_days_lowpoint: 30  # horizon for low-balance scan
 
 data_dir: "./data"  # use /app/data when running in Docker

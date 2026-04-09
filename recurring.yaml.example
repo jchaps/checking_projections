@@ -22,13 +22,13 @@ transactions:
       name_contains: "ZELLE"
       amount_tolerance: 0
 
-  - name: "Electric"
+  - name: "PEPCO Electric Bill"
     type: "debit"
     amount_range: [80, 180]  # variable bill; projection uses midpoint ($130)
     frequency: "monthly"
     day: 15
     match:
-      name_contains: "COMED"
+      name_contains: "PEPCO"
       amount_tolerance: 50.00
 
   - name: "Internet"
@@ -48,6 +48,18 @@ transactions:
     match:
       name_contains: "GEICO"
       amount_tolerance: 10.00
+
+  # ---- Quarterly Example ----
+
+  - name: "Water (WSSC)"
+    type: "debit"
+    amount: 485.91
+    frequency: "quarterly"
+    day: 27
+    anchor_month: 2  # Feb/May/Aug/Nov cycle
+    match:
+      name_contains: "WSSC"
+      amount_tolerance: 200
 
   # ---- Twice Monthly Example ----
 

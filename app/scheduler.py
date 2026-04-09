@@ -43,25 +43,30 @@ def _run_digest():
 
 def start_scheduler():
     """Start the blocking scheduler with sync and digest jobs."""
+    config = load_config()
+    sched_cfg = config["schedule"]
+    sync_cfg = sched_cfg["sync"]
+    digest_cfg = sched_cfg["digest"]
+
     scheduler = BlockingScheduler()
 
-    # Sync Mon/Wed/Sat at 10 AM (Saturday sync is redundant with digest but harmless)
     scheduler.add_job(
         _run_sync,
-        trigger=CronTrigger(day_of_week="mon,wed,sat", hour=10),
+        trigger=CronTrigger(day_of_week=sync_cfg["days"], hour=sync_cfg["hour"], minute=sync_cfg.get("minute", 0)),
         id="sync",
         name="Plaid Sync",
         misfire_grace_time=3600,
     )
 
-    # Saturday digest right after sync (includes its own sync)
     scheduler.add_job(
         _run_digest,
-        trigger=CronTrigger(day_of_week="sat", hour=10, minute=5),
+        trigger=CronTrigger(day_of_week=digest_cfg["days"], hour=digest_cfg["hour"], minute=digest_cfg.get("minute", 0)),
         id="digest",
         name="Weekly Digest",
         misfire_grace_time=3600,
     )
 
-    log.info("Scheduler started: sync Mon/Wed/Sat at 10 AM, digest Saturdays at 10:05 AM")
+    log.info("Scheduler started: sync %s at %d:%02d, digest %s at %d:%02d",
+             sync_cfg["days"], sync_cfg["hour"], sync_cfg.get("minute", 0),
+             digest_cfg["days"], digest_cfg["hour"], digest_cfg.get("minute", 0))
     scheduler.start()
