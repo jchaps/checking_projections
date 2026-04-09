@@ -3,6 +3,9 @@ import logging
 import sys
 from datetime import date
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.config import load_config, load_recurring
 from app import db
 

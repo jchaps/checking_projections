@@ -45,23 +45,23 @@ def start_scheduler():
     """Start the blocking scheduler with sync and digest jobs."""
     scheduler = BlockingScheduler()
 
-    # Sync Mon/Wed/Sat at 6 AM (Saturday sync is redundant with digest but harmless)
+    # Sync Mon/Wed/Sat at 10 AM (Saturday sync is redundant with digest but harmless)
     scheduler.add_job(
         _run_sync,
-        trigger=CronTrigger(day_of_week="mon,wed,sat", hour=6),
+        trigger=CronTrigger(day_of_week="mon,wed,sat", hour=10),
         id="sync",
         name="Plaid Sync",
         misfire_grace_time=3600,
     )
 
-    # Saturday digest at 8 AM (includes its own sync)
+    # Saturday digest right after sync (includes its own sync)
     scheduler.add_job(
         _run_digest,
-        trigger=CronTrigger(day_of_week="sat", hour=8),
+        trigger=CronTrigger(day_of_week="sat", hour=10, minute=5),
         id="digest",
         name="Weekly Digest",
         misfire_grace_time=3600,
     )
 
-    log.info("Scheduler started: sync Mon/Wed/Sat at 6 AM, digest Saturdays at 8 AM")
+    log.info("Scheduler started: sync Mon/Wed/Sat at 10 AM, digest Saturdays at 10:05 AM")
     scheduler.start()
