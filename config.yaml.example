@@ -55,7 +55,7 @@ accounts:
       payment_strategy: "statement_balance"
 
 smtp:
-  host: "smtp.fastmail.com"
+  host: "smtp.example.com"
   port: 465
   username: "you@example.com"
   password: "your_app_password"
