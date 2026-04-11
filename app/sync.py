@@ -31,7 +31,8 @@ def sync_all(config, conn, recurring_config):
             # Sync transactions (checking account item only)
             if item_alias == checking_item:
                 checking_account_id = _resolve_checking_account_id(
-                    client, access_token, config["accounts"]["checking"]["account_name"])
+                    client, access_token, config["accounts"]["checking"]["account_name"],
+                    config["accounts"]["checking"].get("account_mask"))
                 _sync_transactions(client, conn, item_alias, access_token, checking_account_id)
 
             # Sync balances for all accounts under this item
@@ -51,7 +52,7 @@ def sync_all(config, conn, recurring_config):
     matcher.match_new_transactions(conn, recurring_config)
 
 
-def _resolve_checking_account_id(client, access_token, account_name):
+def _resolve_checking_account_id(client, access_token, account_name, account_mask=None):
     """Look up the Plaid account_id for the checking account."""
     request = AccountsGetRequest(access_token=access_token)
     response = client.accounts_get(request)
@@ -60,6 +61,8 @@ def _resolve_checking_account_id(client, access_token, account_name):
         official_name = account.official_name or ""
         searchable = f"{name} {official_name}".lower()
         if account_name.lower() in searchable and str(account.type) == "depository":
+            if account_mask and (account.mask or "") != account_mask:
+                continue
             return account.account_id
     return None
 
@@ -142,8 +145,10 @@ def _sync_balances(client, conn, config, item_alias, access_token):
         searchable = f"{name} {official_name}".lower()
 
         # Check if this is the checking account
+        checking_mask = checking_cfg.get("account_mask")
         if (item_alias == checking_cfg["plaid_item"]
-                and checking_cfg["account_name"].lower() in searchable):
+                and checking_cfg["account_name"].lower() in searchable
+                and (not checking_mask or (account.mask or "") == checking_mask)):
             db.upsert_balance(
                 conn,
                 account_id="checking",
