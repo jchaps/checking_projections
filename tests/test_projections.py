@@ -10,7 +10,7 @@ from app.projections import (
     _generate_recurring_occurrences,
     _get_occurrence_dates,
     _generate_cc_payments,
-    _get_payment_amount,
+    _compute_payment_amount,
     _filter_unfulfilled,
     ProjectedDay,
     ProjectedTransaction,
@@ -130,32 +130,50 @@ class TestGenerateCcPayments:
         events = _generate_cc_payments(conn, sample_config, date(2026, 4, 1), date(2026, 4, 30))
         assert events == []
 
+    def test_statement_strategy_subtracts_prior_payments(self, conn, sample_config):
+        # statement 2000, current 5000 -> first pays 2000, next pays remaining 3000
+        db.upsert_balance(conn, "Savor", "credit_card", 5000.00)
+        db.upsert_liability(conn, "Savor", 2000.00, "2026-03-15", 25.00, "2026-04-15")
+        events = _generate_cc_payments(conn, sample_config, date(2026, 4, 1), date(2026, 6, 30))
+        savor = sorted([e for e in events if "Savor" in e["name"]], key=lambda e: e["date"])
+        assert len(savor) == 2
+        assert savor[0]["amount"] == 2000.00
+        assert savor[1]["amount"] == 3000.00
 
-class TestGetPaymentAmount:
-    def test_statement_balance(self, conn):
-        card = {"name": "TestCard", "payment_strategy": "statement_balance"}
-        db.upsert_liability(conn, "TestCard", 800.00, "2026-03-15", 25.00, "2026-04-15")
-        assert _get_payment_amount(conn, card) == 800.00
+    def test_statement_strategy_zero_after_full_payoff(self, conn, sample_config):
+        # statement equals current -> first payment clears it, no second event
+        db.upsert_balance(conn, "Savor", "credit_card", 800.00)
+        db.upsert_liability(conn, "Savor", 800.00, "2026-03-15", 25.00, "2026-04-15")
+        events = _generate_cc_payments(conn, sample_config, date(2026, 4, 1), date(2026, 6, 30))
+        savor = [e for e in events if "Savor" in e["name"]]
+        assert len(savor) == 1
+        assert savor[0]["amount"] == 800.00
 
-    def test_min_payment(self, conn):
-        card = {"name": "TestCard", "payment_strategy": "min_payment"}
-        db.upsert_liability(conn, "TestCard", 800.00, "2026-03-15", 25.00, "2026-04-15")
-        assert _get_payment_amount(conn, card) == 25.00
 
-    def test_current_balance(self, conn):
-        card = {"name": "TestCard", "payment_strategy": "current_balance"}
-        db.upsert_balance(conn, "TestCard", "credit_card", 950.00)
-        assert _get_payment_amount(conn, card) == 950.00
+class TestComputePaymentAmount:
+    def test_statement_balance_first_occurrence(self):
+        assert _compute_payment_amount("statement_balance", 0, 800.00, 800.00, 25.00) == 800.00
 
-    def test_statement_balance_falls_back_to_current(self, conn):
-        card = {"name": "TestCard", "payment_strategy": "statement_balance"}
-        db.upsert_balance(conn, "TestCard", "credit_card", 600.00)
-        # No liability record -> falls back to current_balance
-        assert _get_payment_amount(conn, card) == 600.00
+    def test_statement_balance_subsequent_uses_remaining(self):
+        # statement 2000, current 5000, after first payment remaining=3000
+        assert _compute_payment_amount("statement_balance", 1, 3000.00, 2000.00, 25.00) == 3000.00
 
-    def test_no_data_returns_none(self, conn):
-        card = {"name": "TestCard", "payment_strategy": "statement_balance"}
-        assert _get_payment_amount(conn, card) is None
+    def test_statement_balance_capped_when_partially_paid(self):
+        # statement 800, current already drawn down to 500
+        assert _compute_payment_amount("statement_balance", 0, 500.00, 800.00, 25.00) == 500.00
+
+    def test_min_payment(self):
+        assert _compute_payment_amount("min_payment", 0, 800.00, 800.00, 25.00) == 25.00
+
+    def test_current_balance(self):
+        assert _compute_payment_amount("current_balance", 0, 950.00, None, None) == 950.00
+
+    def test_statement_balance_falls_back_to_remaining(self):
+        # No statement data -> use remaining (current balance)
+        assert _compute_payment_amount("statement_balance", 0, 600.00, None, None) == 600.00
+
+    def test_no_data_returns_none(self):
+        assert _compute_payment_amount("statement_balance", 0, None, None, None) is None
 
 
 class TestFilterUnfulfilled:
@@ -180,19 +198,22 @@ class TestFindLowPoints:
         projection = [
             ProjectedDay(date(2026, 4, 1), 6000, [], 6000),
             ProjectedDay(date(2026, 4, 2), 6000, [ProjectedTransaction("Rent", 2100, "debit")], 3900),
-            ProjectedDay(date(2026, 4, 3), 3900, [], 3900),
+            ProjectedDay(date(2026, 4, 3), 3900, [ProjectedTransaction("Other", 4000, "debit")], -100),
         ]
         alerts = find_low_points(projection, 5000)
-        assert len(alerts) == 2
-        assert alerts[0].date == date(2026, 4, 2)
-        assert alerts[1].date == date(2026, 4, 3)
+        assert alerts["below_threshold"].date == date(2026, 4, 2)
+        assert alerts["below_zero"].date == date(2026, 4, 3)
+        assert alerts["low_point"].date == date(2026, 4, 3)
 
     def test_no_alerts_when_above_threshold(self):
         projection = [
             ProjectedDay(date(2026, 4, 1), 10000, [], 10000),
             ProjectedDay(date(2026, 4, 2), 10000, [], 10000),
         ]
-        assert find_low_points(projection, 5000) == []
+        alerts = find_low_points(projection, 5000)
+        assert alerts["below_threshold"] is None
+        assert alerts["below_zero"] is None
+        assert alerts["low_point"].date == date(2026, 4, 1)
 
 
 class TestBuildProjection:

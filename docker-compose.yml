@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     environment:
-      - TZ=America/Chicago
+      - TZ=America/New_York
 
 secrets:
   plaid_tokens:

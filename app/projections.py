@@ -183,22 +183,28 @@ def _get_occurrence_dates(recurring, start_date, end_date):
 
 
 def _generate_cc_payments(conn, config, start_date, end_date):
-    """Generate credit card payment events from liability due dates."""
+    """Generate credit card payment events from liability due dates.
+
+    Walks projected payment dates in order, drawing down a running `remaining`
+    balance so subsequent in-window payments reflect prior payments already
+    accounted for in the projection.
+    """
     events = []
     for card in config["accounts"]["credit_cards"]:
-        payment_amount = _get_payment_amount(conn, card)
-        if payment_amount is None or payment_amount <= 0:
-            continue
-
         liability = db.get_liability(conn, card["name"])
         if not liability or not liability["next_payment_due_date"]:
             continue
+
+        balance_row = conn.execute(
+            "SELECT current_balance FROM account_balances WHERE account_id = ?",
+            (card["name"],)
+        ).fetchone()
+        current_balance = balance_row["current_balance"] if balance_row else None
 
         due_date = date.fromisoformat(liability["next_payment_due_date"])
 
         # Project due dates: current cycle and future months at same day-of-month
         payment_day = due_date.day
-        # Start from the known due date, then project forward monthly
         candidates = [due_date]
         current = due_date
         for _ in range(3):  # up to 3 more months ahead
@@ -209,46 +215,55 @@ def _generate_cc_payments(conn, config, start_date, end_date):
             max_day = calendar.monthrange(current.year, current.month)[1]
             candidates.append(current.replace(day=min(payment_day, max_day)))
 
-        for pay_date in candidates:
+        strategy = card["payment_strategy"]
+        statement_bal = liability["last_statement_balance"]
+        min_payment = liability["minimum_payment"]
+        remaining = current_balance
+
+        for idx, pay_date in enumerate(candidates):
+            amount = _compute_payment_amount(
+                strategy, idx, remaining, statement_bal, min_payment
+            )
+            if amount is None or amount <= 0:
+                continue
             if start_date <= pay_date <= end_date:
                 events.append({
                     "date": pay_date,
                     "name": f"CC Payment: {card['name']}",
-                    "amount": payment_amount,
+                    "amount": amount,
                     "type": "debit",
                     "recurring_name": f"__cc__{card['name']}",
                     "cycle_date": str(pay_date),
                 })
+            if remaining is not None:
+                remaining = max(0, remaining - amount)
 
     return events
 
 
-def _get_payment_amount(conn, card):
-    """Determine payment amount based on the card's configured strategy."""
-    strategy = card["payment_strategy"]
-    liability = db.get_liability(conn, card["name"])
-    balance_row = conn.execute(
-        "SELECT current_balance FROM account_balances WHERE account_id = ?",
-        (card["name"],)
-    ).fetchone()
-    current_balance = balance_row["current_balance"] if balance_row else None
+def _compute_payment_amount(strategy, idx, remaining, statement_bal, min_payment):
+    """Compute payment amount for one CC payment occurrence.
 
+    `idx` is position in the projected series (0 = next due payment). For
+    statement_balance and current_balance strategies, later payments draw down
+    `remaining` rather than re-paying the original balance.
+    """
     if strategy == "statement_balance":
-        if liability and liability["last_statement_balance"] is not None:
-            statement_bal = liability["last_statement_balance"]
-            # If current balance is less, payment was partially/fully made already
-            if current_balance is not None and current_balance < statement_bal:
-                return max(current_balance, 0)
-            return statement_bal
-        return current_balance  # fallback
+        if idx == 0:
+            if statement_bal is not None:
+                if remaining is not None and remaining < statement_bal:
+                    return max(remaining, 0)
+                return statement_bal
+            return remaining
+        return remaining
 
-    elif strategy == "min_payment":
-        if liability and liability["minimum_payment"] is not None:
-            return liability["minimum_payment"]
-        return current_balance  # fallback
+    if strategy == "min_payment":
+        if min_payment is not None:
+            return min_payment
+        return remaining
 
-    elif strategy == "current_balance":
-        return current_balance
+    if strategy == "current_balance":
+        return remaining
 
     return None
 
