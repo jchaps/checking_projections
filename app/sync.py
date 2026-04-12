@@ -1,5 +1,8 @@
+import json
 import logging
+import time
 
+import plaid
 from plaid.model.accounts_get_request import AccountsGetRequest
 from plaid.model.liabilities_get_request import LiabilitiesGetRequest
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
@@ -7,6 +10,10 @@ from plaid.model.transactions_sync_request import TransactionsSyncRequest
 from app import db, plaid_client, matcher
 
 log = logging.getLogger(__name__)
+
+# Plaid returns PRODUCT_NOT_READY briefly after an item is first linked, while
+# transactions are still being pulled in the background. Retry with backoff.
+_PRODUCT_NOT_READY_MAX_WAIT = 30  # seconds
 
 
 def sync_all(config, conn, recurring_config):
@@ -67,6 +74,22 @@ def _resolve_checking_account_id(client, access_token, account_name, account_mas
     return None
 
 
+def _transactions_sync_with_retry(client, request, item_alias):
+    waited = 0.0
+    delay = 1.0
+    while True:
+        try:
+            return client.transactions_sync(request)
+        except plaid.ApiException as e:
+            body = json.loads(e.body) if e.body else {}
+            if body.get("error_code") != "PRODUCT_NOT_READY" or waited >= _PRODUCT_NOT_READY_MAX_WAIT:
+                raise
+            log.info("PRODUCT_NOT_READY for '%s', retrying in %.0fs", item_alias, delay)
+            time.sleep(delay)
+            waited += delay
+            delay = min(delay * 2, 5.0)
+
+
 def _sync_transactions(client, conn, item_alias, access_token, checking_account_id=None):
     """Incrementally sync checking account transactions using /transactions/sync."""
     cursor = db.get_sync_cursor(conn, item_alias)
@@ -80,7 +103,7 @@ def _sync_transactions(client, conn, item_alias, access_token, checking_account_
         if cursor:
             request.cursor = cursor
 
-        response = client.transactions_sync(request)
+        response = _transactions_sync_with_retry(client, request, item_alias)
 
         # Process added — filter to checking account only
         added = []
