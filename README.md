@@ -74,26 +74,55 @@ The whole thing runs in a single container on a cron schedule you control from `
 
 ## Setup
 
-### 1. Clone and configure
+### Quick start
 
 ```bash
 git clone https://github.com/jchaps/checking_projections.git
 cd checking_projections
+./setup.sh
+```
+
+`setup.sh` handles everything: it creates scaffold files, builds the Docker image, and launches a browser-based setup wizard that walks you through:
+
+1. **Plaid credentials** — enter your `client_id` and `secret` (stored in `.env`, never in config files).
+2. **Link bank accounts** — connect each institution through Plaid Link. Link all institutions before proceeding.
+3. **Select checking account** — pick your primary checking account from linked accounts.
+4. **Select credit cards** — choose which cards to track and set a payment strategy per card (`statement_balance`, `min_payment`, or `current_balance`).
+5. **Email settings** — configure SMTP for digest emails, with a test button.
+6. **Schedule & thresholds** — set sync/digest schedules and low-balance warning threshold.
+7. **Recurring transactions** — define bills and income, with suggestions based on recent transaction history.
+
+When you click **Finish & Close**, the wizard writes `config.yaml`, `recurring.yaml`, and `.env`, initializes the database, and the script automatically starts the application with `docker compose up -d`.
+
+To re-run the wizard later (e.g. to add a new institution or credit card), just run `./setup.sh` again — it will stop the running application, open the wizard pre-populated with your existing configuration, and restart the application when you're done.
+
+### Manual setup
+
+If you prefer to configure everything by hand, you can edit the YAML files directly:
+
+```bash
 cp config.yaml.example config.yaml
 cp recurring.yaml.example recurring.yaml
 ```
 
 Open `config.yaml` and fill in:
 
-- **`plaid`** — your Plaid `client_id`, `secret`, and `environment` (`sandbox`, `development`, or `production`).
-- **`accounts.checking`** — which Plaid item your checking account lives under, and a substring that matches the Plaid account name. If you have more than one checking account on the same login (say, a joint and a personal), add `account_mask: "1234"` to disambiguate by the last four digits.
-- **`accounts.credit_cards`** — one entry per card, each pointing at a Plaid item. Multiple cards under one login share a `plaid_item`. Pick a `payment_strategy` per card:
-  - `statement_balance` — pay the full statement balance on the due date (pays in full, avoids interest).
-  - `min_payment` — pay the minimum and carry the rest.
-  - `current_balance` — pay whatever the card currently owes.
+- **`plaid.environment`** — `sandbox`, `development`, or `production`.
+- **`accounts.checking`** — which Plaid item your checking account lives under, and a substring that matches the Plaid account name. If you have more than one checking account on the same login, add `account_mask: "1234"` to disambiguate by the last four digits.
+- **`accounts.credit_cards`** — one entry per card, each pointing at a Plaid item. Multiple cards under one login share a `plaid_item`. Pick a `payment_strategy` per card.
 - **`smtp`** — host, port, username, password, from/to. For Gmail: `smtp.gmail.com`, port `465`, and an [app password](https://myaccount.google.com/apppasswords).
 - **`thresholds.low_balance_warning`** — the dollar amount below which you want the digest to light up red.
 - **`schedule`** — when the sync and digest jobs run. Times are in the container's timezone (set to `America/New_York` by default in `docker-compose.yml`).
+
+Create a `.env` file with your Plaid credentials:
+
+```bash
+PLAID_CLIENT_ID=your_client_id
+PLAID_SECRET=your_secret
+PLAID_ENCRYPTION_KEY=your_generated_key
+```
+
+Generate the encryption key with `docker compose run --rm checking-projections generate-key`.
 
 Then open `recurring.yaml` and describe your recurring paychecks and bills. Frequencies supported:
 
@@ -108,68 +137,13 @@ Each entry needs a `match` block — a substring that appears in the Plaid trans
 
 > **Credit card payments are not listed in `recurring.yaml`.** They're generated automatically from the cards you defined in `config.yaml`.
 
-### 2. Generate an encryption key
-
-Plaid access tokens are long-lived and sensitive. They're stored encrypted at rest with [Fernet](https://cryptography.io/en/latest/fernet/).
+Link your accounts, sync, and start:
 
 ```bash
-docker compose run --rm checking-projections generate-key
-```
-
-Copy the printed key into a `.env` file next to `docker-compose.yml`:
-
-```bash
-# .env
-PLAID_ENCRYPTION_KEY=your-generated-key-here
-```
-
-### 3. Link your accounts
-
-You have two options depending on whether you're using real banks or Plaid's sandbox.
-
-**Real accounts (development/production):**
-
-```bash
-docker compose run --rm -p 8080:8080 checking-projections link capital_one
-```
-
-This creates a Plaid Link token, starts a tiny local web server, and prints a URL. Open it in your browser, pick your institution, log in, and finish the flow. The resulting access token is encrypted and saved. Repeat for each `plaid_item` alias you referenced in `config.yaml` (`chase_1`, `bofa`, etc.).
-
-**Sandbox (no real credentials):**
-
-```bash
-docker compose run --rm checking-projections sandbox-link capital_one ins_128026
-```
-
-No browser needed — you get back a fake access token wired to Plaid's test data. Handy institution IDs: `ins_128026` (Capital One), `ins_3` (Chase), `ins_127989` (Bank of America).
-
-After linking, run:
-
-```bash
-docker compose run --rm checking-projections list-accounts
-```
-
-…to see every account under every linked item. Copy the exact `Name` values into `config.yaml` under `account_name` so the matcher knows which account is which.
-
-### 4. First sync
-
-```bash
+docker compose run --rm -p 8484:8484 checking-projections link capital_one
 docker compose run --rm checking-projections sync
-```
-
-This pulls balances, transactions, and liabilities into `./data/checking.db`. Then take a look at what the projection thinks:
-
-```bash
-docker compose run --rm checking-projections projection --days 60
-```
-
-If that output looks right, you're done with setup. Start the scheduler:
-
-```bash
 docker compose up -d
 ```
-
-It'll now run sync on the days you configured and email you the digest once a week.
 
 ## Ongoing use
 
@@ -195,13 +169,15 @@ Logs from the scheduler live in `docker compose logs -f checking-projections`.
 
 ### Editing bills and cards
 
-Changes to `config.yaml` and `recurring.yaml` are picked up on the next sync or projection run — no rebuild required, since both files are mounted read-only into the container. Added a new card? Run `sandbox-link` or `link` for its item if it's on a new login, then `sync`.
+The easiest way to make changes is to re-run the setup wizard:
 
-### Adding a new Plaid item
+```bash
+./setup.sh
+```
 
-1. Add the new `plaid_item` alias to `config.yaml` (under `accounts.credit_cards` or wherever).
-2. Run `link <new_item_alias>` and finish the browser flow.
-3. Run `list-accounts` to confirm the account names, update `config.yaml` if needed, and `sync`.
+It will load your existing configuration, let you add new institutions, credit cards, or recurring transactions, and restart the application when you're done.
+
+You can also edit `config.yaml` and `recurring.yaml` directly — changes are picked up on the next sync or projection run, no rebuild required.
 
 ## Configuration reference
 
@@ -210,8 +186,6 @@ Changes to `config.yaml` and `recurring.yaml` are picked up on the next sync or 
 
 | Key | Type | Description |
 |---|---|---|
-| `plaid.client_id` | string | Plaid client ID |
-| `plaid.secret` | string | Plaid secret for the chosen environment |
 | `plaid.environment` | enum | `sandbox`, `development`, or `production` |
 | `accounts.checking.plaid_item` | string | Which item alias your checking lives under |
 | `accounts.checking.account_name` | string | Substring to match against Plaid's account name |
@@ -248,9 +222,9 @@ Each entry under `transactions:` needs:
 
 ## Data and security
 
-- **Everything stays local.** The SQLite database lives in `./data/checking.db`. Plaid access tokens live in `./secrets/plaid_tokens.json` (mounted into the container as a Docker secret) and are encrypted at rest with the Fernet key in your `.env`.
+- **Everything stays local.** The SQLite database lives in `./data/checking.db`. Plaid access tokens live in `./secrets/plaid_tokens.json` and are encrypted at rest with the Fernet key in your `.env`. Plaid credentials (`PLAID_CLIENT_ID`, `PLAID_SECRET`) are stored in `.env`, not in config files.
 - **`.gitignore` already excludes** `data/`, `secrets/`, `config.yaml`, `recurring.yaml`, and `.env` so you can't accidentally commit them. Double-check before pushing to a fork anyway.
-- **No web UI, no API, no cloud.** Only Plaid and your SMTP provider see your data.
+- **No persistent web UI.** The setup wizard runs only during configuration and shuts down when you're done. Only Plaid and your SMTP provider see your data.
 - **The digest email contains your balance and upcoming transactions.** Think about whether that's something you want sitting in your inbox and pick a destination accordingly.
 
 ## Local development
@@ -287,6 +261,8 @@ app/
   sync.py           # Pulls from Plaid, writes to SQLite
   plaid_client.py   # Plaid API wrapper + encrypted token storage
   link_server.py    # Local HTTP server for the Plaid Link flow
+  setup_server.py   # Browser-based setup wizard (Flask)
+  static/setup.html # Setup wizard single-page UI
   db.py             # SQLite schema and helpers
   matcher.py        # Reconciles posted transactions against recurring defs
   projections.py    # Day-by-day balance simulation
