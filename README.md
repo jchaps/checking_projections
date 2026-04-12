@@ -18,7 +18,7 @@
 
 Checking Projections is a small self-hosted tool that pulls your checking account and credit cards from [Plaid](https://plaid.com/), walks a day-by-day simulation of your balance forward using the recurring bills and paychecks you define, and emails you a weekly digest with the next month laid out — including a loud warning if it looks like you're headed below your comfort threshold (or, worse, below zero).
 
-I built it because I got tired of doing mental math every time a big bill was coming up. I wanted something that would just tell me, every Saturday morning: *here's what the next 30 days look like, and here's the day the balance gets scary.* If that sounds useful to you too, read on.
+I built it because I got tired of doing mental math every time a big bill was coming up, especially with my intent to pay full credit card statement balances each month, whereas those balances (and payments) can vary significantly month-to-month. I wanted something that would just tell me, every Saturday morning: *here's what the next 30 days look like, and here's the day the balance gets scary.* If that sounds useful to you too, read on.
 
 ## What it does
 
