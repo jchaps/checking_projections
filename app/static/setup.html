@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checking Projections - Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      margin: 0; background: #f7f9fc; color: #333; line-height: 1.6;
+    }
+    .shell {
+      max-width: 720px; margin: 40px auto; padding: 0 20px;
+    }
+    h1 { color: #2c3e50; font-size: 1.6rem; margin: 0 0 4px; }
+    .subtitle { color: #666; font-size: 0.95rem; margin-bottom: 24px; }
+
+    /* Step indicator */
+    .steps-bar {
+      display: flex; gap: 4px; margin-bottom: 28px;
+    }
+    .steps-bar .pip {
+      flex: 1; height: 4px; border-radius: 2px; background: #dce3ec; transition: background .3s;
+    }
+    .steps-bar .pip.done { background: #27ae60; }
+    .steps-bar .pip.active { background: #3498db; }
+
+    /* Card */
+    .card {
+      background: #fff; border-radius: 10px; padding: 32px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 1.25rem; color: #2c3e50; }
+    .card .step-desc { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+
+    /* Forms */
+    label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #444; }
+    input, select, textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid #d0d5dd; border-radius: 6px;
+      font-size: 0.95rem; margin-bottom: 14px; font-family: inherit; background: #fff;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.12); }
+    .row { display: flex; gap: 14px; }
+    .row > * { flex: 1; }
+    .hint { font-size: 0.8rem; color: #888; margin: -10px 0 14px; }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 22px; border: none; border-radius: 6px; font-size: 0.95rem;
+      cursor: pointer; font-weight: 600; transition: background .2s;
+    }
+    .btn-primary { background: #3498db; color: #fff; }
+    .btn-primary:hover { background: #2980b9; }
+    .btn-primary:disabled { background: #a0c4e8; cursor: not-allowed; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-success:hover { background: #219a52; }
+    .btn-outline { background: transparent; border: 1px solid #d0d5dd; color: #555; }
+    .btn-outline:hover { background: #f0f2f5; }
+    .btn-danger { background: #e74c3c; color: #fff; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+    .btn-nav { display: flex; justify-content: space-between; margin-top: 24px; }
+
+    /* Alerts */
+    .alert { padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 14px; }
+    .alert-error { background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; }
+    .alert-success { background: #e8f8f0; color: #1e8449; border: 1px solid #a9dfbf; }
+    .alert-info { background: #eaf2fa; color: #2471a3; border: 1px solid #aed6f1; }
+
+    /* Account cards */
+    .item-card {
+      border: 1px solid #e0e5ec; border-radius: 8px; padding: 16px; margin-bottom: 12px;
+    }
+    .item-card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .acct-list { margin: 0; padding: 0; list-style: none; }
+    .acct-list li { padding: 6px 0; border-bottom: 1px solid #f0f2f5; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+    .acct-list li:last-child { border-bottom: none; }
+    .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge-dep { background: #e8f8f0; color: #1e8449; }
+    .badge-credit { background: #fdecea; color: #c0392b; }
+    .badge-other { background: #f0f2f5; color: #666; }
+
+    /* Selectable radio/check cards */
+    label.selectable {
+      display: flex; align-items: center; gap: 12px;
+      border: 2px solid #e0e5ec; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;
+      cursor: pointer; transition: border-color .2s, background .2s;
+      font-weight: normal; font-size: 0.95rem;
+    }
+    .selectable:hover { border-color: #3498db; }
+    .selectable.selected { border-color: #3498db; background: #eaf2fa; }
+    .selectable input[type="radio"], .selectable input[type="checkbox"] { width: auto; margin: 0 0 0 0; flex-shrink: 0; }
+    .selectable .acct-info { flex: 1; min-width: 0; }
+    .selectable .acct-name { font-weight: 600; }
+    .selectable .acct-detail { font-size: 0.85rem; color: #666; }
+    .selectable select { width: auto; margin: 0; padding: 6px 10px; font-size: 0.85rem; }
+
+    /* Recurring table */
+    .recurring-entry {
+      border: 1px solid #e0e5ec; border-radius: 8px; padding: 16px; margin-bottom: 12px;
+    }
+    .recurring-entry .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .recurring-entry .entry-header h4 { margin: 0; font-size: 0.95rem; }
+
+    /* Day checkboxes */
+    .day-checks { display: flex; gap: 6px; margin-bottom: 14px; }
+    .day-check { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .day-check label { font-size: 0.8rem; font-weight: 500; }
+    .day-check input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
+
+    /* Suggestions */
+    .suggestion {
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid #e0e5ec; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px;
+      font-size: 0.9rem; transition: background .2s;
+    }
+    .suggestion:hover { background: #f7f9fc; }
+    .suggestion .sg-info { flex: 1; min-width: 0; }
+    .suggestion .sg-name { font-weight: 600; }
+    .suggestion .sg-detail { font-size: 0.8rem; color: #888; }
+    .suggestion .sg-amount { font-weight: 600; white-space: nowrap; }
+    .sg-credit { color: #1e8449; }
+    .sg-debit { color: #c0392b; }
+
+    /* Preview */
+    pre.preview {
+      background: #1e2128; color: #abb2bf; padding: 16px; border-radius: 8px;
+      font-size: 0.85rem; overflow-x: auto; max-height: 400px; white-space: pre-wrap;
+    }
+
+    /* Spinner */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-left: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <h1>Checking Projections</h1>
+  <p class="subtitle">Setup Wizard</p>
+
+  <div class="steps-bar" id="stepsBar"></div>
+
+  <div id="wizard"></div>
+</div>
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script>
+// ── State ────────────────────────────────────────────────────────────
+const DEFAULTS = {
+  step: 0,
+  plaid: { client_id: "", secret: "", environment: "development" },
+  plaidValidated: false,
+  encryptionKey: "",
+  linkedItems: {},  // { alias: [ {name, type, subtype, mask, official_name} ] }
+  checking: null,   // { plaid_item, account_name, account_mask }
+  creditCards: [],   // [ {name, plaid_item, account_name, payment_strategy} ]
+  smtp: { host: "smtp.gmail.com", port: 465, username: "", password: "", from: "", to: "" },
+  thresholds: { low_balance_warning: 5000 },
+  schedule: {
+    sync: { days: "mon,wed,sat", hour: 10, minute: 0 },
+    digest: { days: "sat", hour: 10, minute: 5 },
+  },
+  digest: { projection_days_detail: 30, projection_days_lowpoint: 30 },
+  recurring: [],
+};
+
+let S = { ...DEFAULTS };
+
+function saveState() {
+  try { sessionStorage.setItem("wizardState", JSON.stringify(S)); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = sessionStorage.getItem("wizardState");
+    if (raw) {
+      const saved = JSON.parse(raw);
+      Object.assign(S, saved);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+const STEPS = [
+  { title: "Plaid Credentials", render: renderPlaid },
+  { title: "Link Bank Accounts", render: renderLink },
+  { title: "Checking Account", render: renderChecking },
+  { title: "Credit Cards", render: renderCards },
+  { title: "Email Settings", render: renderEmail },
+  { title: "Schedule & Thresholds", render: renderSchedule },
+  { title: "Recurring Transactions", render: renderRecurring },
+  { title: "Review & Save", render: renderReview },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => [...(el || document).querySelectorAll(s)];
+
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => {
+    if (k === "className") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
+  });
+  children.flat().forEach(c => {
+    if (c == null) return;
+    el.append(typeof c === "string" ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+
+async function api(path, body) {
+  const opts = body !== undefined
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    : {};
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+function setStep(n) {
+  S.step = Math.max(0, Math.min(n, STEPS.length - 1));
+  renderWizard();
+}
+
+// ── Render engine ────────────────────────────────────────────────────
+function renderWizard() {
+  saveState();
+
+  // Steps bar
+  const bar = $("#stepsBar");
+  bar.innerHTML = "";
+  STEPS.forEach((_, i) => {
+    const pip = h("div", { className: "pip" + (i < S.step ? " done" : i === S.step ? " active" : "") });
+    bar.append(pip);
+  });
+
+  const wiz = $("#wizard");
+  wiz.innerHTML = "";
+  const card = h("div", { className: "card" });
+  card.append(h("h2", null, STEPS[S.step].title));
+  STEPS[S.step].render(card);
+  wiz.append(card);
+}
+
+function navButtons(card, { nextLabel, nextDisabled, onNext, backHidden } = {}) {
+  const nav = h("div", { className: "btn-nav" });
+  if (S.step > 0 && !backHidden) {
+    nav.append(h("button", { className: "btn btn-outline", onClick: () => setStep(S.step - 1) }, "Back"));
+  } else {
+    nav.append(h("span"));
+  }
+  if (S.step < STEPS.length - 1) {
+    const btn = h("button", {
+      className: "btn btn-primary",
+      onClick: onNext || (() => setStep(S.step + 1)),
+    }, nextLabel || "Next");
+    if (nextDisabled) btn.disabled = true;
+    nav.append(btn);
+  }
+  card.append(nav);
+}
+
+// ── Step 1: Plaid Credentials ────────────────────────────────────────
+function renderPlaid(card) {
+  card.append(h("p", { className: "step-desc" }, "Enter your Plaid API credentials. You can get these from the Plaid dashboard."));
+
+  const alert = h("div", { className: "alert hidden", id: "plaidAlert" });
+  card.append(alert);
+
+  card.append(h("label", { for: "plaidEnv" }, "Environment"));
+  const envSel = h("select", { id: "plaidEnv" });
+  ["sandbox", "development", "production"].forEach(e => {
+    const opt = h("option", { value: e }, e.charAt(0).toUpperCase() + e.slice(1));
+    if (e === S.plaid.environment) opt.selected = true;
+    envSel.append(opt);
+  });
+  card.append(envSel);
+
+  card.append(h("label", { for: "plaidId" }, "Client ID"));
+  card.append(h("input", { type: "text", id: "plaidId", value: S.plaid.client_id, placeholder: "e.g. 5f1234abc..." }));
+
+  card.append(h("label", { for: "plaidSecret" }, "Secret"));
+  card.append(h("input", { type: "password", id: "plaidSecret", value: S.plaid.secret, placeholder: "e.g. abc123..." }));
+
+  const nav = h("div", { className: "btn-nav" });
+  nav.append(h("span"));
+  const nextBtn = h("button", { className: "btn btn-primary", id: "plaidNextBtn", onClick: validatePlaid }, "Validate & Continue");
+  nav.append(nextBtn);
+  card.append(nav);
+}
+
+async function validatePlaid() {
+  const btn = $("#plaidNextBtn");
+  const alert = $("#plaidAlert");
+  S.plaid.client_id = $("#plaidId").value.trim();
+  S.plaid.secret = $("#plaidSecret").value.trim();
+  S.plaid.environment = $("#plaidEnv").value;
+
+  btn.disabled = true;
+  btn.innerHTML = "Validating" + '<span class="spinner"></span>';
+  alert.className = "alert hidden";
+
+  const res = await api("/api/validate-plaid", S.plaid);
+  if (res.ok) {
+    S.plaidValidated = true;
+    // Generate encryption key
+    const keyRes = await api("/api/generate-key", {});
+    if (keyRes.ok) S.encryptionKey = keyRes.key;
+    setStep(1);
+  } else {
+    alert.textContent = res.error || "Validation failed.";
+    alert.className = "alert alert-error";
+    btn.disabled = false;
+    btn.textContent = "Validate & Continue";
+  }
+}
+
+// ── Step 2: Link Bank Accounts ───────────────────────────────────────
+function renderLink(card) {
+  card.append(h("p", { className: "step-desc" }, "Connect your bank accounts through Plaid. Give each institution a short name (e.g. \"Capital One\", \"Chase\"). Link all bank accounts before proceeding to the next step."));
+  card.append(h("p", { className: "step-desc" }, "When Plaid asks which accounts to share, you only need to include checking and credit card accounts. Other account types (savings, mortgage, auto loan, etc.) can be safely excluded."));
+
+  const alert = h("div", { className: "alert hidden", id: "linkAlert" });
+  card.append(alert);
+
+  // Add item form
+  const addRow = h("div", { className: "row", style: "align-items: flex-end;" });
+  const aliasWrap = h("div");
+  aliasWrap.append(h("label", { for: "itemAlias" }, "Item Alias"));
+  aliasWrap.append(h("input", { type: "text", id: "itemAlias", placeholder: "e.g. Capital One", style: "margin-bottom:0" }));
+  addRow.append(aliasWrap);
+  const linkBtn = h("button", { className: "btn btn-primary", id: "linkBtn", style: "margin-bottom:0; white-space:nowrap;", onClick: startLink }, "Link Account");
+  addRow.append(linkBtn);
+  card.append(addRow);
+  card.append(h("div", { style: "height:14px" }));
+
+  // Linked items list
+  const list = h("div", { id: "linkedItems" });
+  Object.entries(S.linkedItems).forEach(([alias, accounts]) => {
+    list.append(renderItemCard(alias, accounts));
+  });
+  card.append(list);
+
+  if (Object.keys(S.linkedItems).length === 0) {
+    card.append(h("div", { className: "alert alert-info" }, "No accounts linked yet. Link at least one institution to continue."));
+  }
+
+  navButtons(card, { nextDisabled: Object.keys(S.linkedItems).length === 0 });
+}
+
+function renderItemCard(alias, accounts) {
+  const ic = h("div", { className: "item-card" });
+  const hdr = h("div", { style: "display:flex; justify-content:space-between; align-items:center;" });
+  hdr.append(h("h3", null, alias));
+  hdr.append(h("button", { className: "btn btn-outline btn-sm", onClick: () => { delete S.linkedItems[alias]; renderWizard(); } }, "Remove"));
+  ic.append(hdr);
+
+  const ul = h("ul", { className: "acct-list" });
+  accounts.forEach(a => {
+    const badgeClass = a.type === "depository" ? "badge-dep" : a.type === "credit" ? "badge-credit" : "badge-other";
+    const li = h("li", null,
+      h("span", { className: "badge " + badgeClass }, a.type),
+      h("span", null, a.name + (a.mask ? " (..."+a.mask+")" : "")),
+      h("span", { style: "color:#888; font-size:0.8rem" }, a.subtype),
+    );
+    ul.append(li);
+  });
+  ic.append(ul);
+  return ic;
+}
+
+async function startLink() {
+  let alias = $("#itemAlias").value.trim().replace(/\s+/g, "_").toLowerCase();
+  const alert = $("#linkAlert");
+  if (!alias) { alert.textContent = "Enter a name first."; alert.className = "alert alert-error"; return; }
+
+  // Auto-increment alias if it already exists
+  if (S.linkedItems[alias]) {
+    let n = 2;
+    while (S.linkedItems[alias + "_" + n]) n++;
+    alias = alias + "_" + n;
+  }
+
+  const btn = $("#linkBtn");
+  btn.disabled = true;
+  btn.innerHTML = "Connecting" + '<span class="spinner"></span>';
+  alert.className = "alert hidden";
+
+  const res = await api("/api/create-link-token", { item_alias: alias });
+  if (!res.ok) {
+    alert.textContent = res.error; alert.className = "alert alert-error";
+    btn.disabled = false; btn.textContent = "Link Account"; return;
+  }
+
+  // Open Plaid Link
+  const handler = Plaid.create({
+    token: res.link_token,
+    onSuccess: async (publicToken) => {
+      btn.innerHTML = "Saving" + '<span class="spinner"></span>';
+      const exRes = await api("/api/exchange-token", { item_alias: alias, public_token: publicToken });
+      if (exRes.ok) {
+        S.linkedItems[alias] = exRes.accounts;
+        renderWizard();
+      } else {
+        alert.textContent = exRes.error; alert.className = "alert alert-error";
+        btn.disabled = false; btn.textContent = "Link Account";
+      }
+    },
+    onExit: (err) => {
+      btn.disabled = false; btn.textContent = "Link Account";
+      if (err) { alert.textContent = err.display_message || err.error_code; alert.className = "alert alert-error"; }
+    },
+  });
+  handler.open();
+}
+
+// ── Step 3: Checking Account ─────────────────────────────────────────
+function renderChecking(card) {
+  card.append(h("p", { className: "step-desc" }, "Select your primary checking account. This app projects balances for a single checking account."));
+
+  const depositories = [];
+  Object.entries(S.linkedItems).forEach(([alias, accounts]) => {
+    accounts.filter(a => a.type === "depository").forEach(a => {
+      depositories.push({ ...a, plaid_item: alias });
+    });
+  });
+
+  if (depositories.length === 0) {
+    card.append(h("div", { className: "alert alert-info" }, "No depository accounts found. Go back and link an account."));
+    navButtons(card, { nextDisabled: true });
+    return;
+  }
+
+  depositories.forEach((a, i) => {
+    const key = a.plaid_item + "|" + a.name + "|" + a.mask;
+    const isSelected = S.checking && S.checking._key === key;
+    const wrapper = h("label", { className: "selectable" + (isSelected ? " selected" : "") });
+    const radio = h("input", { type: "radio", name: "checking", value: String(i) });
+    if (isSelected) radio.checked = true;
+    radio.addEventListener("change", () => {
+      S.checking = { plaid_item: a.plaid_item, account_name: a.name, account_mask: a.mask, _key: key };
+      renderWizard();
+    });
+    wrapper.append(radio);
+    const info = h("div", { className: "acct-info" });
+    info.append(h("div", { className: "acct-name" }, a.name + (a.mask ? " (..."+a.mask+")" : "")));
+    info.append(h("div", { className: "acct-detail" }, a.plaid_item + " \u2022 " + a.subtype));
+    wrapper.append(info);
+    card.append(wrapper);
+  });
+
+  navButtons(card, { nextDisabled: !S.checking });
+}
+
+// ── Step 4: Credit Cards ─────────────────────────────────────────────
+function renderCards(card) {
+  card.append(h("p", { className: "step-desc" }, "Select the credit cards you want to track. Payments will be auto-projected based on each card's strategy."));
+
+  const credits = [];
+  Object.entries(S.linkedItems).forEach(([alias, accounts]) => {
+    accounts.filter(a => a.type === "credit").forEach(a => {
+      credits.push({ ...a, plaid_item: alias });
+    });
+  });
+
+  if (credits.length === 0) {
+    card.append(h("div", { className: "alert alert-info" }, "No credit card accounts found. You can skip this step or link another institution."));
+    navButtons(card);
+    return;
+  }
+
+  const allSelected = credits.every(a => S.creditCards.find(c => c._key === a.plaid_item + "|" + a.name + "|" + a.mask));
+  const selAllBtn = h("button", { className: "btn btn-outline btn-sm", style: "margin-bottom: 12px;", onClick: () => {
+    if (allSelected) {
+      S.creditCards = [];
+    } else {
+      credits.forEach(a => {
+        const key = a.plaid_item + "|" + a.name + "|" + a.mask;
+        if (!S.creditCards.find(c => c._key === key)) {
+          S.creditCards.push({ name: a.name, plaid_item: a.plaid_item, account_name: a.name, account_mask: a.mask || "", payment_strategy: "statement_balance", _key: key });
+        }
+      });
+    }
+    renderWizard();
+  }}, allSelected ? "Deselect All" : "Select All");
+  card.append(selAllBtn);
+
+  credits.forEach((a) => {
+    const key = a.plaid_item + "|" + a.name + "|" + a.mask;
+    const existing = S.creditCards.find(c => c._key === key);
+    const isSelected = !!existing;
+
+    const wrapper = h("div", { className: "selectable" + (isSelected ? " selected" : ""), style: "flex-wrap:wrap;" });
+    const cb = h("input", { type: "checkbox" });
+    if (isSelected) cb.checked = true;
+
+    function toggleCard() {
+      if (isSelected) {
+        S.creditCards = S.creditCards.filter(c => c._key !== key);
+      } else {
+        S.creditCards.push({
+          name: a.name, plaid_item: a.plaid_item, account_name: a.name,
+          account_mask: a.mask || "", payment_strategy: "statement_balance", _key: key,
+        });
+      }
+      renderWizard();
+    }
+
+    cb.addEventListener("change", toggleCard);
+    wrapper.addEventListener("click", (e) => {
+      // Only toggle when clicking the card background or info area, not inputs/selects
+      if (e.target === wrapper || e.target.closest(".acct-info")) {
+        toggleCard();
+      }
+    });
+    wrapper.append(cb);
+
+    const info = h("div", { className: "acct-info" });
+    info.append(h("div", { className: "acct-name" }, a.name + (a.mask ? " (..."+a.mask+")" : "")));
+    info.append(h("div", { className: "acct-detail" }, a.plaid_item + " \u2022 " + a.subtype));
+    wrapper.append(info);
+
+    if (isSelected) {
+      const opts = h("div", { style: "width:100%; display:flex; gap:10px; margin-top:8px; padding-left:28px;" });
+      const aliasWrap = h("div", { style: "flex:1;" });
+      const aliasInp = h("input", {
+        type: "text", placeholder: "Display name (optional)", style: "margin-bottom:0; font-size:0.85rem;",
+        value: existing.name !== a.name ? existing.name : "",
+      });
+      aliasInp.addEventListener("input", (e) => { existing.name = e.target.value.trim() || a.name; });
+      aliasWrap.append(aliasInp);
+      opts.append(aliasWrap);
+
+      const stratWrap = h("div", { style: "flex:1;" });
+      const strat = h("select", { style: "margin-bottom:0; font-size:0.85rem;" });
+      ["statement_balance", "min_payment", "current_balance"].forEach(s => {
+        const opt = h("option", { value: s }, s.replace(/_/g, " "));
+        if (existing.payment_strategy === s) opt.selected = true;
+        strat.append(opt);
+      });
+      strat.addEventListener("change", (e) => {
+        existing.payment_strategy = e.target.value;
+      });
+      stratWrap.append(strat);
+      opts.append(stratWrap);
+
+      wrapper.append(opts);
+    }
+
+    card.append(wrapper);
+  });
+
+  const nav = h("div", { className: "btn-nav" });
+  nav.append(h("button", { className: "btn btn-outline", onClick: () => setStep(S.step - 1) }, "Back"));
+  const rightBtns = h("div", { style: "display:flex; gap:10px;" });
+  rightBtns.append(h("button", { className: "btn btn-outline", onClick: () => setStep(1) }, "+ Link Another Institution"));
+  rightBtns.append(h("button", { className: "btn btn-primary", onClick: () => setStep(S.step + 1) }, "Next"));
+  nav.append(rightBtns);
+  card.append(nav);
+}
+
+// ── Step 5: Email Settings ───────────────────────────────────────────
+function renderEmail(card) {
+  card.append(h("p", { className: "step-desc" }, "Configure SMTP for digest emails. For Gmail, use an App Password."));
+
+  const alert = h("div", { className: "alert hidden", id: "emailAlert" });
+  card.append(alert);
+
+  const fields = [
+    { row: [{ id: "smtpHost", label: "SMTP Host", key: "host", placeholder: "smtp.gmail.com" },
+             { id: "smtpPort", label: "Port", key: "port", placeholder: "465", type: "number" }] },
+    { row: [{ id: "smtpUser", label: "Username", key: "username", placeholder: "you@gmail.com" },
+             { id: "smtpPass", label: "Password", key: "password", placeholder: "App password", type: "password" }] },
+    { row: [{ id: "smtpFrom", label: "From", key: "from", placeholder: "you@gmail.com" },
+             { id: "smtpTo", label: "To", key: "to", placeholder: "you@gmail.com" }] },
+  ];
+
+  fields.forEach(f => {
+    const row = h("div", { className: "row" });
+    f.row.forEach(field => {
+      const wrap = h("div");
+      wrap.append(h("label", { for: field.id }, field.label));
+      const inp = h("input", {
+        type: field.type || "text", id: field.id,
+        value: String(S.smtp[field.key] || ""), placeholder: field.placeholder || "",
+      });
+      inp.addEventListener("input", () => { S.smtp[field.key] = field.type === "number" ? Number(inp.value) : inp.value; });
+      wrap.append(inp);
+      row.append(wrap);
+    });
+    card.append(row);
+  });
+
+  const testBtn = h("button", { className: "btn btn-outline btn-sm", id: "testEmailBtn", onClick: testEmail }, "Send Test Email");
+  card.append(testBtn);
+
+  navButtons(card);
+}
+
+async function testEmail() {
+  const btn = $("#testEmailBtn");
+  const alert = $("#emailAlert");
+  btn.disabled = true;
+  btn.innerHTML = "Sending" + '<span class="spinner"></span>';
+  alert.className = "alert hidden";
+
+  // Read latest values from inputs
+  S.smtp.host = $("#smtpHost").value.trim();
+  S.smtp.port = Number($("#smtpPort").value);
+  S.smtp.username = $("#smtpUser").value.trim();
+  S.smtp.password = $("#smtpPass").value.trim();
+  S.smtp.from = $("#smtpFrom").value.trim();
+  S.smtp.to = $("#smtpTo").value.trim();
+
+  const res = await api("/api/test-email", S.smtp);
+  if (res.ok) {
+    alert.textContent = "Test email sent successfully!";
+    alert.className = "alert alert-success";
+  } else {
+    alert.textContent = res.error || "Failed to send.";
+    alert.className = "alert alert-error";
+  }
+  btn.disabled = false;
+  btn.textContent = "Send Test Email";
+}
+
+// ── Step 6: Schedule & Thresholds ────────────────────────────────────
+function renderSchedule(card) {
+  card.append(h("p", { className: "step-desc" }, "Configure when syncs and digest emails run, and set alert thresholds."));
+
+  const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const dayLabels = { mon: "M", tue: "T", wed: "W", thu: "T", fri: "F", sat: "S", sun: "S" };
+
+  function dayPicker(label, schedKey) {
+    const selected = S.schedule[schedKey].days.split(",").map(d => d.trim()).filter(Boolean);
+    const wrap = h("div", { style: "margin-bottom: 14px;" });
+    wrap.append(h("label", null, label + " Days"));
+    const dc = h("div", { className: "day-checks" });
+    allDays.forEach(day => {
+      const dw = h("div", { className: "day-check" });
+      const cb = h("input", { type: "checkbox", id: schedKey + "_" + day });
+      if (selected.includes(day)) cb.checked = true;
+      cb.addEventListener("change", () => {
+        const checked = allDays.filter(d => $(("#" + schedKey + "_" + d)).checked);
+        S.schedule[schedKey].days = checked.join(",");
+      });
+      dw.append(cb);
+      dw.append(h("label", { for: schedKey + "_" + day }, dayLabels[day]));
+      dc.append(dw);
+    });
+    wrap.append(dc);
+
+    const timeRow = h("div", { className: "row" });
+    const hw = h("div");
+    hw.append(h("label", null, "Hour (0-23)"));
+    const hi = h("input", { type: "number", min: "0", max: "23", value: String(S.schedule[schedKey].hour) });
+    hi.addEventListener("input", () => { S.schedule[schedKey].hour = Number(hi.value); });
+    hw.append(hi);
+    timeRow.append(hw);
+    const mw = h("div");
+    mw.append(h("label", null, "Minute"));
+    const mi = h("input", { type: "number", min: "0", max: "59", value: String(S.schedule[schedKey].minute) });
+    mi.addEventListener("input", () => { S.schedule[schedKey].minute = Number(mi.value); });
+    mw.append(mi);
+    timeRow.append(mw);
+    wrap.append(timeRow);
+    return wrap;
+  }
+
+  card.append(dayPicker("Sync", "sync"));
+  card.append(dayPicker("Digest", "digest"));
+
+  card.append(h("hr", { style: "border:none; border-top:1px solid #e0e5ec; margin:20px 0;" }));
+
+  card.append(h("label", null, "Low Balance Warning ($)"));
+  const lbw = h("input", { type: "number", value: String(S.thresholds.low_balance_warning) });
+  lbw.addEventListener("input", () => { S.thresholds.low_balance_warning = Number(lbw.value); });
+  card.append(lbw);
+
+  const projRow = h("div", { className: "row" });
+  const pdw = h("div");
+  pdw.append(h("label", null, "Projection Detail (days)"));
+  const pdi = h("input", { type: "number", value: String(S.digest.projection_days_detail) });
+  pdi.addEventListener("input", () => { S.digest.projection_days_detail = Number(pdi.value); });
+  pdw.append(pdi);
+  projRow.append(pdw);
+  const plw = h("div");
+  plw.append(h("label", null, "Low-Point Scan (days)"));
+  const pli = h("input", { type: "number", value: String(S.digest.projection_days_lowpoint) });
+  pli.addEventListener("input", () => { S.digest.projection_days_lowpoint = Number(pli.value); });
+  plw.append(pli);
+  projRow.append(plw);
+  card.append(projRow);
+
+  navButtons(card);
+}
+
+// ── Step 7: Recurring Transactions ───────────────────────────────────
+let _suggestions = null;  // cached after first fetch
+let _suggestionsLoading = false;
+
+function renderRecurring(card) {
+  card.append(h("p", { className: "step-desc" },
+    "Define recurring transactions (bills, income) so the projection knows what's coming. Credit card payments are generated automatically from linked cards."
+  ));
+
+  // Suggestions section
+  const sgSection = h("div", { id: "suggestions", style: "margin-bottom: 20px;" });
+  if (_suggestions === null && !_suggestionsLoading && S.checking) {
+    _suggestionsLoading = true;
+    sgSection.append(h("p", { style: "color:#888; font-size:0.9rem;" }, "Analyzing recent transactions for recurring patterns..."));
+    api("/api/suggest-recurring", { checking: S.checking }).then(res => {
+      _suggestionsLoading = false;
+      if (res.ok) {
+        _suggestions = res.suggestions || [];
+      } else {
+        _suggestions = [];
+      }
+      renderWizard();
+    });
+  } else if (_suggestions && _suggestions.length > 0) {
+    // Filter out suggestions already added to recurring
+    const existingNames = S.recurring.map(r => r.match.name_contains.toUpperCase()).filter(Boolean);
+    const filtered = _suggestions.filter(sg =>
+      !existingNames.some(n => n && sg.match_name.toUpperCase().includes(n))
+    );
+
+    if (filtered.length > 0) {
+      sgSection.append(h("label", null, "Suggested Recurring Transactions"));
+      sgSection.append(h("p", { className: "hint", style: "margin-top:0;" }, "Based on the last 90 days of checking account activity. Click to add."));
+      filtered.forEach(sg => sgSection.append(renderSuggestion(sg)));
+    }
+  } else if (_suggestions && _suggestions.length === 0) {
+    sgSection.append(h("div", { className: "alert alert-info" }, "No recurring patterns detected in recent transactions."));
+  }
+  card.append(sgSection);
+
+  // Existing recurring entries
+  if (S.recurring.length > 0) {
+    card.append(h("label", null, "Configured Recurring Transactions"));
+  }
+  const list = h("div", { id: "recurringList" });
+  S.recurring.forEach((r, i) => list.append(renderRecurringEntry(r, i)));
+  card.append(list);
+
+  const addBtn = h("button", { className: "btn btn-outline btn-sm", onClick: () => {
+    S.recurring.push({
+      name: "", type: "debit", amount: "", amount_range_low: "", amount_range_high: "",
+      useRange: false, frequency: "monthly", day: 1, anchor_date: "", days: [1, 15],
+      anchor_month: 1, match: { name_contains: "", amount_tolerance: 0, date_tolerance_days: 3 },
+    });
+    renderWizard();
+  }}, "+ Add Manually");
+  card.append(addBtn);
+
+  navButtons(card);
+}
+
+function renderSuggestion(sg) {
+  const row = h("div", { className: "suggestion", style: "cursor:pointer;", onClick: () => addSuggestion(sg) });
+
+  const info = h("div", { className: "sg-info" });
+  info.append(h("div", { className: "sg-name" }, sg.name));
+  const freqLabel = sg.frequency + (sg.day ? " (day " + sg.day + ")" : "") + " \u2022 " + sg.occurrences + " occurrences";
+  info.append(h("div", { className: "sg-detail" }, freqLabel));
+  row.append(info);
+
+  const amtClass = sg.type === "credit" ? "sg-credit" : "sg-debit";
+  const amtText = sg.amount_range
+    ? "$" + sg.amount_range[0].toFixed(2) + " \u2013 $" + sg.amount_range[1].toFixed(2)
+    : "$" + sg.avg_amount.toFixed(2);
+  row.append(h("div", { className: "sg-amount " + amtClass }, (sg.type === "credit" ? "+" : "-") + amtText));
+
+  row.append(h("button", { className: "btn btn-primary btn-sm", onClick: (e) => { e.stopPropagation(); addSuggestion(sg); } }, "Add"));
+  return row;
+}
+
+function addSuggestion(sg) {
+  const entry = {
+    name: sg.name,
+    type: sg.type,
+    frequency: sg.frequency,
+    day: sg.day || 1,
+    anchor_date: sg.anchor_date || "",
+    days: [1, 15],
+    anchor_month: sg.anchor_month || 1,
+    useRange: !!sg.amount_range,
+    amount: sg.amount || sg.avg_amount || "",
+    amount_range_low: sg.amount_range ? sg.amount_range[0] : "",
+    amount_range_high: sg.amount_range ? sg.amount_range[1] : "",
+    match: {
+      name_contains: sg.match_name,
+      amount_tolerance: sg.amount_range ? Math.ceil((sg.amount_range[1] - sg.amount_range[0]) / 2) : Math.round(sg.avg_amount * 0.1),
+      date_tolerance_days: 3,
+    },
+  };
+  S.recurring.push(entry);
+  renderWizard();
+}
+
+function renderRecurringEntry(r, idx) {
+  const entry = h("div", { className: "recurring-entry" });
+  const hdr = h("div", { className: "entry-header" });
+  hdr.append(h("h4", null, r.name || "(new transaction)"));
+  hdr.append(h("button", { className: "btn btn-danger btn-sm", onClick: () => {
+    S.recurring.splice(idx, 1); renderWizard();
+  }}, "Remove"));
+  entry.append(hdr);
+
+  // Row 1: name, type
+  const r1 = h("div", { className: "row" });
+  const nw = h("div");
+  nw.append(h("label", null, "Name"));
+  const ni = h("input", { type: "text", value: r.name, placeholder: "e.g. Rent" });
+  ni.addEventListener("input", () => { r.name = ni.value; });
+  nw.append(ni);
+  r1.append(nw);
+  const tw = h("div");
+  tw.append(h("label", null, "Type"));
+  const ts = h("select");
+  ["debit", "credit"].forEach(t => {
+    const o = h("option", { value: t }, t); if (r.type === t) o.selected = true; ts.append(o);
+  });
+  ts.addEventListener("change", () => { r.type = ts.value; });
+  tw.append(ts);
+  r1.append(tw);
+  entry.append(r1);
+
+  // Row 2: amount
+  const r2 = h("div", { className: "row", style: "align-items: flex-end;" });
+  if (!r.useRange) {
+    const aw = h("div");
+    aw.append(h("label", null, "Amount ($)"));
+    const ai = h("input", { type: "number", step: "0.01", value: r.amount || "" , placeholder: "e.g. 2100.00" });
+    ai.addEventListener("input", () => { r.amount = ai.value; });
+    aw.append(ai);
+    r2.append(aw);
+  } else {
+    const lw = h("div");
+    lw.append(h("label", null, "Amount Low ($)"));
+    const li = h("input", { type: "number", step: "0.01", value: r.amount_range_low || "" });
+    li.addEventListener("input", () => { r.amount_range_low = li.value; });
+    lw.append(li);
+    r2.append(lw);
+    const hw = h("div");
+    hw.append(h("label", null, "Amount High ($)"));
+    const hi = h("input", { type: "number", step: "0.01", value: r.amount_range_high || "" });
+    hi.addEventListener("input", () => { r.amount_range_high = hi.value; });
+    hw.append(hi);
+    r2.append(hw);
+  }
+  const rngW = h("div", { style: "flex:0 0 auto; padding-bottom:14px;" });
+  const rngCb = h("input", { type: "checkbox", style: "margin-right:4px;" });
+  if (r.useRange) rngCb.checked = true;
+  rngCb.addEventListener("change", () => { r.useRange = rngCb.checked; renderWizard(); });
+  rngW.append(rngCb);
+  rngW.append(h("span", { style: "font-size:0.85rem;" }, "Range"));
+  r2.append(rngW);
+  entry.append(r2);
+
+  // Row 3: frequency + frequency-specific fields
+  const r3 = h("div", { className: "row" });
+  const fw = h("div");
+  fw.append(h("label", null, "Frequency"));
+  const fs = h("select");
+  ["monthly", "biweekly", "twice_monthly", "quarterly"].forEach(f => {
+    const o = h("option", { value: f }, f.replace("_", " ")); if (r.frequency === f) o.selected = true; fs.append(o);
+  });
+  fs.addEventListener("change", () => { r.frequency = fs.value; renderWizard(); });
+  fw.append(fs);
+  r3.append(fw);
+
+  if (r.frequency === "monthly") {
+    const dw = h("div");
+    dw.append(h("label", null, "Day of Month"));
+    const di = h("input", { type: "number", min: "1", max: "31", value: String(r.day || 1) });
+    di.addEventListener("input", () => { r.day = Number(di.value); });
+    dw.append(di);
+    r3.append(dw);
+  } else if (r.frequency === "biweekly") {
+    const dw = h("div");
+    dw.append(h("label", null, "Anchor Date"));
+    const di = h("input", { type: "date", value: r.anchor_date || "" });
+    di.addEventListener("input", () => { r.anchor_date = di.value; });
+    dw.append(di);
+    r3.append(dw);
+  } else if (r.frequency === "twice_monthly") {
+    const dw = h("div");
+    dw.append(h("label", null, "Days (e.g. 1, 15)"));
+    const di = h("input", { type: "text", value: (r.days || [1, 15]).join(", ") });
+    di.addEventListener("input", () => {
+      r.days = di.value.split(",").map(d => Number(d.trim())).filter(d => !isNaN(d));
+    });
+    dw.append(di);
+    r3.append(dw);
+  } else if (r.frequency === "quarterly") {
+    const dw = h("div");
+    dw.append(h("label", null, "Day"));
+    const di = h("input", { type: "number", min: "1", max: "31", value: String(r.day || 1) });
+    di.addEventListener("input", () => { r.day = Number(di.value); });
+    dw.append(di);
+    r3.append(dw);
+    const mw = h("div");
+    mw.append(h("label", null, "Anchor Month (1-12)"));
+    const mi = h("input", { type: "number", min: "1", max: "12", value: String(r.anchor_month || 1) });
+    mi.addEventListener("input", () => { r.anchor_month = Number(mi.value); });
+    mw.append(mi);
+    r3.append(mw);
+  }
+  entry.append(r3);
+
+  // Row 4: match block
+  entry.append(h("label", { style: "margin-top:4px;" }, "Transaction Matching"));
+  const r4 = h("div", { className: "row" });
+  const ncw = h("div");
+  ncw.append(h("label", null, "Name Contains"));
+  const nci = h("input", { type: "text", value: r.match.name_contains, placeholder: "e.g. DIRECT DEP" });
+  nci.addEventListener("input", () => { r.match.name_contains = nci.value; });
+  ncw.append(nci);
+  r4.append(ncw);
+  const atw = h("div");
+  atw.append(h("label", null, "Amount Tolerance ($)"));
+  const ati = h("input", { type: "number", step: "0.01", value: String(r.match.amount_tolerance || 0) });
+  ati.addEventListener("input", () => { r.match.amount_tolerance = Number(ati.value); });
+  atw.append(ati);
+  r4.append(atw);
+  const dtw = h("div");
+  dtw.append(h("label", null, "Date Tolerance (days)"));
+  const dti = h("input", { type: "number", value: String(r.match.date_tolerance_days || 3) });
+  dti.addEventListener("input", () => { r.match.date_tolerance_days = Number(dti.value); });
+  dtw.append(dti);
+  r4.append(dtw);
+  entry.append(r4);
+
+  return entry;
+}
+
+// ── Step 8: Review & Save ────────────────────────────────────────────
+function buildConfig() {
+  const config = {
+    plaid: { environment: S.plaid.environment },
+    accounts: {
+      checking: {
+        plaid_item: S.checking?.plaid_item || "",
+        account_name: S.checking?.account_name || "",
+      },
+      credit_cards: S.creditCards.map(c => {
+        const card = { name: c.name, plaid_item: c.plaid_item,
+          account_name: c.account_name, payment_strategy: c.payment_strategy };
+        if (c.account_mask) card.account_mask = c.account_mask;
+        return card;
+      }),
+    },
+    smtp: { ...S.smtp },
+    thresholds: { ...S.thresholds },
+    schedule: {
+      sync: { ...S.schedule.sync },
+      digest: { ...S.schedule.digest },
+    },
+    digest: { ...S.digest },
+    data_dir: "./data",
+  };
+  // Add account_mask if present
+  if (S.checking?.account_mask) {
+    config.accounts.checking.account_mask = S.checking.account_mask;
+  }
+  return config;
+}
+
+function buildRecurring() {
+  return S.recurring.map(r => {
+    const out = {
+      name: r.name,
+      type: r.type,
+      frequency: r.frequency,
+      match: {
+        name_contains: r.match.name_contains,
+        amount_tolerance: r.match.amount_tolerance || 0,
+        date_tolerance_days: r.match.date_tolerance_days || 3,
+      },
+    };
+    if (r.useRange) {
+      out.amount_range = [Number(r.amount_range_low) || 0, Number(r.amount_range_high) || 0];
+    } else {
+      out.amount = Number(r.amount) || 0;
+    }
+    if (r.frequency === "monthly") out.day = r.day || 1;
+    else if (r.frequency === "biweekly") out.anchor_date = r.anchor_date || "";
+    else if (r.frequency === "twice_monthly") out.days = r.days || [1, 15];
+    else if (r.frequency === "quarterly") { out.day = r.day || 1; out.anchor_month = r.anchor_month || 1; }
+    return out;
+  });
+}
+
+function toYaml(obj, indent) {
+  // Simple YAML serializer for preview (not used for actual writing)
+  indent = indent || 0;
+  const pad = "  ".repeat(indent);
+  let out = "";
+  if (Array.isArray(obj)) {
+    obj.forEach(item => {
+      if (typeof item === "object" && item !== null) {
+        const keys = Object.keys(item);
+        out += pad + "- " + keys[0] + ": " + formatVal(item[keys[0]]) + "\n";
+        keys.slice(1).forEach(k => {
+          out += pad + "  " + k + ": " + formatVal(item[k]) + "\n";
+        });
+      } else {
+        out += pad + "- " + formatVal(item) + "\n";
+      }
+    });
+  } else if (typeof obj === "object" && obj !== null) {
+    Object.entries(obj).forEach(([k, v]) => {
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+        out += pad + k + ":\n" + toYaml(v, indent + 1);
+      } else if (Array.isArray(v)) {
+        out += pad + k + ":\n" + toYaml(v, indent + 1);
+      } else {
+        out += pad + k + ": " + formatVal(v) + "\n";
+      }
+    });
+  }
+  return out;
+}
+
+function formatVal(v) {
+  if (typeof v === "string") return v.includes(":") || v.includes("#") || v === "" ? '"' + v + '"' : v;
+  return String(v);
+}
+
+function renderReview(card) {
+  card.append(h("p", { className: "step-desc" }, "Review your configuration before saving."));
+
+  const alert = h("div", { className: "alert hidden", id: "saveAlert" });
+  card.append(alert);
+
+  const config = buildConfig();
+  const recurring = buildRecurring();
+
+  // .env preview (secrets)
+  const envLines = [
+    "PLAID_CLIENT_ID=" + S.plaid.client_id,
+    "PLAID_SECRET=" + S.plaid.secret,
+    "PLAID_ENCRYPTION_KEY=(auto-generated)",
+  ].join("\n");
+  card.append(h("label", null, ".env"));
+  card.append(h("pre", { className: "preview" }, envLines));
+
+  card.append(h("label", null, "config.yaml"));
+  card.append(h("pre", { className: "preview" }, toYaml(config)));
+
+  card.append(h("label", null, "recurring.yaml"));
+  card.append(h("pre", { className: "preview" }, toYaml({ transactions: recurring })));
+
+  const nav = h("div", { className: "btn-nav" });
+  nav.append(h("button", { className: "btn btn-outline", onClick: () => setStep(S.step - 1) }, "Back"));
+  nav.append(h("button", { className: "btn btn-success", id: "saveBtn", onClick: saveAll }, "Save & Finish"));
+  card.append(nav);
+}
+
+async function saveAll() {
+  const btn = $("#saveBtn");
+  const alert = $("#saveAlert");
+  btn.disabled = true;
+  btn.innerHTML = "Saving" + '<span class="spinner"></span>';
+  alert.className = "alert hidden";
+
+  const config = buildConfig();
+  const recurring = buildRecurring();
+
+  // Send Plaid secrets alongside config so backend can write them to .env
+  config.plaid.client_id = S.plaid.client_id;
+  config.plaid.secret = S.plaid.secret;
+  const res = await api("/api/save", { config, recurring });
+  if (res.ok) {
+    sessionStorage.removeItem("wizardState");
+    const wiz = $("#wizard");
+    wiz.innerHTML = "";
+    const card = h("div", { className: "card" });
+    card.append(h("h2", null, "Setup Complete"));
+    card.append(h("div", { className: "alert alert-success" }, "Configuration saved successfully!"));
+    card.append(h("p", null, "Your config.yaml, recurring.yaml, and .env files have been written, and the database has been initialized."));
+    card.append(h("h3", null, "Next Steps"));
+    const ol = h("ol");
+    ol.append(h("li", null, "Run a sync to pull your latest transactions:"));
+    ol.append(h("pre", { className: "preview", style: "margin: 8px 0 12px;" }, "python -m app.main sync"));
+    ol.append(h("li", null, "Test a projection:"));
+    ol.append(h("pre", { className: "preview", style: "margin: 8px 0 12px;" }, "python -m app.main projection --days 30"));
+    ol.append(h("li", null, "Send a test digest:"));
+    ol.append(h("pre", { className: "preview", style: "margin: 8px 0 12px;" }, "python -m app.main digest"));
+    ol.append(h("li", null, "Start the scheduler:"));
+    ol.append(h("pre", { className: "preview", style: "margin: 8px 0 12px;" }, "python -m app.main run"));
+    card.append(ol);
+    const finishBtn = h("button", { className: "btn btn-success", style: "margin-top:16px;", onClick: async () => {
+      finishBtn.disabled = true;
+      finishBtn.textContent = "Shutting down...";
+      try { await api("/api/shutdown", {}); } catch(e) {}
+      finishBtn.textContent = "Server stopped";
+      card.append(h("p", { style: "color:#888; font-size:0.9rem; margin-top:12px;" }, "Setup server has stopped. You can close this browser tab."));
+    }}, "Finish & Close");
+    card.append(finishBtn);
+    wiz.append(card);
+  } else {
+    alert.textContent = res.error || "Save failed.";
+    alert.className = "alert alert-error";
+    btn.disabled = false;
+    btn.textContent = "Save & Finish";
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+async function init() {
+  const restored = loadState();
+  if (restored && S.plaidValidated && S.plaid.client_id) {
+    // Re-establish server-side Plaid client and encryption key
+    await api("/api/restore-session", {
+      plaid: S.plaid,
+      encryption_key: S.encryptionKey,
+    });
+  } else if (!restored) {
+    // Fresh visit — try to load from existing config files
+    const res = await api("/api/load-config");
+    if (res.ok && res.state) {
+      Object.assign(S, res.state);
+      // If config was loaded, skip to step 1 (link accounts) so user
+      // can review or add institutions. Step 0 (credentials) is already done.
+      if (S.plaidValidated) S.step = 1;
+    }
+  }
+  renderWizard();
+}
+init();
+</script>
+</body>
+</html>

@@ -92,6 +92,12 @@ def cmd_digest(args):
         conn.close()
 
 
+def cmd_setup(args):
+    """Launch the browser-based setup wizard."""
+    from app.setup_server import run_setup_wizard
+    run_setup_wizard()
+
+
 def cmd_link(args):
     """Start the Plaid Link flow in a browser for an item."""
     from app import plaid_client
@@ -273,6 +279,7 @@ def main():
     sandbox_parser.add_argument("institution_id", help="Plaid institution ID (e.g., ins_3 for Chase)")
 
     subparsers.add_parser("list-accounts", help="List accounts for all linked items")
+    subparsers.add_parser("setup", help="Launch browser-based setup wizard")
     subparsers.add_parser("setup-db", help="Initialize database")
     subparsers.add_parser("generate-key", help="Generate a Fernet encryption key")
     subparsers.add_parser("encrypt-tokens", help="Encrypt existing plaintext token file")
@@ -281,6 +288,7 @@ def main():
 
     commands = {
         "run": cmd_run,
+        "setup": cmd_setup,
         "sync": cmd_sync,
         "projection": cmd_projection,
         "digest": cmd_digest,

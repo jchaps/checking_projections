@@ -10,6 +10,13 @@ def load_config(path="config.yaml"):
     for section in ("plaid", "accounts", "smtp", "thresholds", "digest"):
         assert section in config, f"Missing config section: {section}"
 
+    # Plaid credentials: env vars take precedence over YAML values
+    plaid = config["plaid"]
+    plaid["client_id"] = os.environ.get("PLAID_CLIENT_ID", plaid.get("client_id", ""))
+    plaid["secret"] = os.environ.get("PLAID_SECRET", plaid.get("secret", ""))
+    assert plaid["client_id"], "Plaid client_id not set (env PLAID_CLIENT_ID or plaid.client_id in config)"
+    assert plaid["secret"], "Plaid secret not set (env PLAID_SECRET or plaid.secret in config)"
+
     assert "checking" in config["accounts"], "Missing accounts.checking"
     assert "credit_cards" in config["accounts"], "Missing accounts.credit_cards"
 

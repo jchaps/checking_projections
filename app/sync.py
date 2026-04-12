@@ -186,6 +186,9 @@ def _sync_balances(client, conn, config, item_alias, access_token):
         for card in sorted(cards_cfg, key=lambda c: len(c["account_name"]), reverse=True):
             if (card["plaid_item"] == item_alias
                     and card["account_name"].lower() in searchable):
+                card_mask = card.get("account_mask")
+                if card_mask and (account.mask or "") != card_mask:
+                    continue
                 db.upsert_balance(
                     conn,
                     account_id=card["name"],
@@ -210,6 +213,9 @@ def _sync_liabilities(client, conn, config, item_alias, access_token, cards_for_
         searchable = f"{name} {official_name}".lower()
         for card in sorted(cards_for_item, key=lambda c: len(c["account_name"]), reverse=True):
             if card["account_name"].lower() in searchable:
+                card_mask = card.get("account_mask")
+                if card_mask and (account.mask or "") != card_mask:
+                    continue
                 account_id_to_card[account.account_id] = card
                 break
 

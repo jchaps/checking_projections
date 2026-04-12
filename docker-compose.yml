@@ -4,16 +4,12 @@ services:
     container_name: checking-projections
     volumes:
       - ./data:/app/data
-      - ./config.yaml:/app/config.yaml:ro
-      - ./recurring.yaml:/app/recurring.yaml:ro
-    secrets:
-      - plaid_tokens
+      - ./config.yaml:/app/config.yaml
+      - ./recurring.yaml:/app/recurring.yaml
+      - ./.env:/app/.env
+      - ./secrets:/app/secrets
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - TZ=America/New_York
-
-secrets:
-  plaid_tokens:
-    file: ./secrets/plaid_tokens.json
