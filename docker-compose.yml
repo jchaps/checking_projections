@@ -4,12 +4,10 @@ services:
     container_name: checking-projections
     volumes:
       - ./data:/app/data
-      - ./config.yaml:/app/config.yaml
-      - ./recurring.yaml:/app/recurring.yaml
-      - ./.env:/app/.env
+      - ./config:/app/config
       - ./secrets:/app/secrets
     restart: unless-stopped
     env_file:
-      - .env
+      - ./config/.env
     environment:
       - TZ=America/New_York

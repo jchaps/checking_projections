@@ -1,8 +1,8 @@
 data/
 secrets/
-config.yaml
-recurring.yaml
+config/config.yaml
+config/recurring.yaml
+config/.env
 __pycache__/
 *.pyc
-.env
 .claude/

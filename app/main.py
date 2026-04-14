@@ -3,8 +3,9 @@ import logging
 import sys
 from datetime import date
 
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent / "config" / ".env")
 
 from app.config import load_config, load_recurring
 from app import db

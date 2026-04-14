@@ -2,7 +2,7 @@ import os
 import yaml
 
 
-def load_config(path="config.yaml"):
+def load_config(path="config/config.yaml"):
     with open(path) as f:
         config = yaml.safe_load(f)
 
@@ -34,7 +34,7 @@ def load_config(path="config.yaml"):
     return config
 
 
-def load_recurring(path="recurring.yaml"):
+def load_recurring(path="config/recurring.yaml"):
     with open(path) as f:
         data = yaml.safe_load(f)
 

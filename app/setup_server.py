@@ -44,9 +44,9 @@ def index():
 @app.route("/api/load-config")
 def load_existing_config():
     """Load existing configuration files and linked accounts for editing."""
-    config_path = BASE_DIR / "config.yaml"
-    recurring_path = BASE_DIR / "recurring.yaml"
-    env_path = BASE_DIR / ".env"
+    config_path = BASE_DIR / "config" / "config.yaml"
+    recurring_path = BASE_DIR / "config" / "recurring.yaml"
+    env_path = BASE_DIR / "config" / ".env"
 
     if not config_path.exists():
         return jsonify({"ok": False, "reason": "no_config"})
@@ -642,18 +642,20 @@ def save_config():
         plaid_secret = config.get("plaid", {}).pop("secret", "")
 
         # Write config.yaml (without Plaid secrets)
-        config_path = BASE_DIR / "config.yaml"
+        config_dir = BASE_DIR / "config"
+        config_dir.mkdir(exist_ok=True)
+        config_path = config_dir / "config.yaml"
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         # Write recurring.yaml
-        recurring_path = BASE_DIR / "recurring.yaml"
+        recurring_path = config_dir / "recurring.yaml"
         recurring_data = {"transactions": recurring or []}
         with open(recurring_path, "w") as f:
             yaml.dump(recurring_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         # Write .env with all secrets
-        env_path = BASE_DIR / ".env"
+        env_path = config_dir / ".env"
         env_lines = []
         if env_path.exists():
             env_lines = env_path.read_text().splitlines()

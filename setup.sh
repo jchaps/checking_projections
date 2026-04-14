@@ -6,14 +6,14 @@ echo "==============================="
 echo
 
 # Create directories
-mkdir -p data secrets
+mkdir -p data secrets config
 
-# Create .env if missing
-if [ ! -f .env ]; then
-  touch .env
-  echo "Created .env"
+# Create config/.env if missing
+if [ ! -f config/.env ]; then
+  touch config/.env
+  echo "Created config/.env"
 else
-  echo ".env already exists, skipping"
+  echo "config/.env already exists, skipping"
 fi
 
 # Create secrets/plaid_tokens.json if missing
@@ -25,9 +25,9 @@ else
   echo "secrets/plaid_tokens.json already exists, skipping"
 fi
 
-# Create config.yaml if missing
-if [ ! -f config.yaml ]; then
-  cat > config.yaml <<'EOF'
+# Create config/config.yaml if missing
+if [ ! -f config/config.yaml ]; then
+  cat > config/config.yaml <<'EOF'
 plaid:
   environment: development
 
@@ -64,19 +64,19 @@ digest:
 
 data_dir: ./data
 EOF
-  echo "Created config.yaml"
+  echo "Created config/config.yaml"
 else
-  echo "config.yaml already exists, skipping"
+  echo "config/config.yaml already exists, skipping"
 fi
 
-# Create recurring.yaml if missing
-if [ ! -f recurring.yaml ]; then
-  cat > recurring.yaml <<'EOF'
+# Create config/recurring.yaml if missing
+if [ ! -f config/recurring.yaml ]; then
+  cat > config/recurring.yaml <<'EOF'
 transactions: []
 EOF
-  echo "Created recurring.yaml"
+  echo "Created config/recurring.yaml"
 else
-  echo "recurring.yaml already exists, skipping"
+  echo "config/recurring.yaml already exists, skipping"
 fi
 
 # Build image if it doesn't exist yet
