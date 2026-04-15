@@ -19,8 +19,16 @@ def build_and_send_digest(config, conn, recurring_config):
     projection = build_projection(conn, config, recurring_config, days=lowpoint_days)
     cc_summary = build_cc_summary(conn, config)
 
-    html = render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold)
+    header = _format_template(
+        config["digest"].get("header", "Checking Projections — Week of {date}")
+    )
+    html = render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold, header)
     send_email(html, config)
+
+
+def _format_template(template):
+    """Format a digest string template, substituting {date} with today's date."""
+    return template.format(date=date.today().strftime("%b %-d, %Y"))
 
 
 def build_cc_summary(conn, config):
@@ -74,7 +82,7 @@ def build_cc_summary(conn, config):
     return cards
 
 
-def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold):
+def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold, header):
     """Render the digest as an HTML string."""
     today = date.today()
     checking_balance = projection[0].opening_balance if projection else 0
@@ -152,7 +160,7 @@ def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold)
 <head><meta charset="utf-8"></head>
 <body style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;color:#333;">
     <h2 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:8px;">
-        Checking Projections &mdash; Week of {today.strftime('%b %-d, %Y')}
+        {header}
     </h2>
 
     <div style="background:#f7f9fc;padding:16px;border-radius:8px;margin:16px 0;">
@@ -201,10 +209,12 @@ def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold)
 def send_email(html, config):
     """Send the digest email via SMTP."""
     smtp_cfg = config["smtp"]
-    today = date.today()
+    subject = _format_template(
+        config["digest"].get("subject", "Checking Projections - Week of {date}")
+    )
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Checking Projections - Week of {today.strftime('%b %-d, %Y')}"
+    msg["Subject"] = subject
     msg["From"] = smtp_cfg["from"]
     msg["To"] = smtp_cfg["to"]
     msg.attach(MIMEText(html, "html"))

@@ -78,5 +78,7 @@ schedule:
 digest:
   projection_days_detail: 30    # detail rows in email (transaction days only)
   projection_days_lowpoint: 30  # horizon for low-balance scan
+  subject: "Checking Projections - Week of {date}"  # {date} = today's date
+  header: "Checking Projections — Week of {date}"   # H2 header in the email body
 
 data_dir: "./data"  # use /app/data when running in Docker
