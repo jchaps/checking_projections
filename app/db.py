@@ -158,7 +158,13 @@ def get_liability(conn, account_id):
 
 
 def get_all_liabilities(conn):
-    return conn.execute("SELECT * FROM cc_liabilities ORDER BY account_id").fetchall()
+    # Sort by due date (earliest first); NULLs last, then account_id as tiebreaker.
+    return conn.execute(
+        """SELECT * FROM cc_liabilities
+           ORDER BY CASE WHEN next_payment_due_date IS NULL THEN 1 ELSE 0 END,
+                    next_payment_due_date,
+                    account_id"""
+    ).fetchall()
 
 
 # --- Recurring Fulfillment ---
