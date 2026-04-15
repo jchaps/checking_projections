@@ -220,7 +220,14 @@ def _generate_cc_payments(conn, config, start_date, end_date):
         min_payment = liability["minimum_payment"]
         remaining = current_balance
 
+        # Plaid reports minimum_payment <= 0 once the cycle's payment has posted;
+        # skip the current due date so we don't double-count a payment that's
+        # already cleared in checking.
+        cycle_paid = min_payment is not None and min_payment <= 0
+
         for idx, pay_date in enumerate(candidates):
+            if idx == 0 and cycle_paid:
+                continue
             amount = _compute_payment_amount(
                 strategy, idx, remaining, statement_bal, min_payment
             )

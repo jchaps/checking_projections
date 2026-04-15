@@ -56,6 +56,10 @@ def build_cc_summary(conn, config):
 
         due_date = liability["next_payment_due_date"] if liability else None
 
+        # Plaid reports minimum_payment <= 0 once the cycle's payment has posted.
+        if min_pay is not None and min_pay <= 0:
+            payment = 0
+
         cards.append({
             "name": card["name"],
             "current_balance": current_bal,
@@ -87,7 +91,7 @@ def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold)
                 amt = f"{sign}${txn.amount:,.0f}"
                 border = "border-bottom:1px solid #eee;" if is_last else ""
                 date_cell = day_data.date.strftime('%a %b %-d') if is_first else ""
-                bal_style = _balance_style(day_data.closing_balance, threshold) if is_last else ""
+                bal_style = _balance_style(day_data.closing_balance) if is_last else ""
                 bal_cell = f"${day_data.closing_balance:,.0f}" if is_last else ""
                 detail_rows += f"""
                 <tr>
@@ -234,8 +238,8 @@ def _fmt_date(value):
     return d.strftime("%a %b %-d")
 
 
-def _balance_style(balance, threshold):
-    """Return inline CSS for balance cells that are below threshold."""
-    if balance < threshold:
+def _balance_style(balance):
+    """Return inline CSS for balance cells that are below zero."""
+    if balance < 0:
         return "color:#c0392b;font-weight:bold;"
     return ""
