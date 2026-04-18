@@ -30,9 +30,7 @@ def _run_digest():
     recurring = load_recurring()
     conn = db.get_db(config["data_dir"])
     try:
-        log.info("Starting Saturday digest: syncing first")
-        sync_all(config, conn, recurring)
-        log.info("Sync complete, building digest")
+        log.info("Building digest")
         build_and_send_digest(config, conn, recurring)
         log.info("Digest sent successfully")
     except Exception:
