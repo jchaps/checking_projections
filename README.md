@@ -101,11 +101,11 @@ To re-run the wizard later (e.g. to add a new institution or credit card), just 
 If you prefer to configure everything by hand, you can edit the YAML files directly:
 
 ```bash
-cp config.yaml.example config.yaml
-cp recurring.yaml.example recurring.yaml
+cp config/config.yaml.example config/config.yaml
+cp config/recurring.yaml.example config/recurring.yaml
 ```
 
-Open `config.yaml` and fill in:
+Open `config/config.yaml` and fill in:
 
 - **`plaid.environment`** — `sandbox`, `development`, or `production`.
 - **`accounts.checking`** — which Plaid item your checking account lives under, and a substring that matches the Plaid account name. If you have more than one checking account on the same login, add `account_mask: "1234"` to disambiguate by the last four digits.
@@ -114,7 +114,7 @@ Open `config.yaml` and fill in:
 - **`thresholds.low_balance_warning`** — the dollar amount below which you want the digest to light up red.
 - **`schedule`** — when the sync and digest jobs run. Times are in the container's timezone (set to `America/New_York` by default in `docker-compose.yml`).
 
-Create a `.env` file with your Plaid credentials:
+Create a `config/.env` file with your Plaid credentials:
 
 ```bash
 PLAID_CLIENT_ID=your_client_id
@@ -124,7 +124,7 @@ PLAID_ENCRYPTION_KEY=your_generated_key
 
 Generate the encryption key with `docker compose run --rm checking-projections generate-key`.
 
-Then open `recurring.yaml` and describe your recurring paychecks and bills. Frequencies supported:
+Then open `config/recurring.yaml` and describe your recurring paychecks and bills. Frequencies supported:
 
 | Frequency       | Required fields                 | Example                    |
 |-----------------|---------------------------------|----------------------------|
@@ -222,8 +222,8 @@ Each entry under `transactions:` needs:
 
 ## Data and security
 
-- **Everything stays local.** The SQLite database lives in `./data/checking.db`. Plaid access tokens live in `./secrets/plaid_tokens.json` and are encrypted at rest with the Fernet key in your `.env`. Plaid credentials (`PLAID_CLIENT_ID`, `PLAID_SECRET`) are stored in `.env`, not in config files.
-- **`.gitignore` already excludes** `data/`, `secrets/`, `config.yaml`, `recurring.yaml`, and `.env` so you can't accidentally commit them. Double-check before pushing to a fork anyway.
+- **Everything stays local.** The SQLite database lives in `./data/checking.db`. Plaid access tokens live in `./secrets/plaid_tokens.json` and are encrypted at rest with the Fernet key in your `config/.env`. Plaid credentials (`PLAID_CLIENT_ID`, `PLAID_SECRET`) are stored in `config/.env`, not in config files.
+- **`.gitignore` already excludes** `data/`, `secrets/`, `config/config.yaml`, `config/recurring.yaml`, and `config/.env` so you can't accidentally commit them. Double-check before pushing to a fork anyway.
 - **No persistent web UI.** The setup wizard runs only during configuration and shuts down when you're done. Only Plaid and your SMTP provider see your data.
 - **The digest email contains your balance and upcoming transactions.** Think about whether that's something you want sitting in your inbox and pick a destination accordingly.
 
@@ -236,8 +236,8 @@ python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-cp config.yaml.example config.yaml
-cp recurring.yaml.example recurring.yaml
+cp config/config.yaml.example config/config.yaml
+cp config/recurring.yaml.example config/recurring.yaml
 # …edit both…
 
 python -m app.main setup-db
