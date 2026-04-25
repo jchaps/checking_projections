@@ -87,8 +87,8 @@ def cmd_digest(args):
     recurring = load_recurring()
     conn = db.get_db(config["data_dir"])
     try:
-        build_and_send_digest(config, conn, recurring)
-        print("Digest sent.")
+        build_and_send_digest(config, conn, recurring, to=args.to)
+        print(f"Digest sent to {args.to or config['smtp']['to']}.")
     finally:
         conn.close()
 
@@ -268,7 +268,8 @@ def main():
     proj_parser = subparsers.add_parser("projection", help="Print balance projection")
     proj_parser.add_argument("--days", type=int, default=30, help="Number of days to project (default: 30)")
 
-    subparsers.add_parser("digest", help="Send digest email now")
+    digest_parser = subparsers.add_parser("digest", help="Send digest email now")
+    digest_parser.add_argument("--to", help="Override recipient email address")
 
     link_parser = subparsers.add_parser("link", help="Link a Plaid item")
     link_parser.add_argument("item", help="Item alias (e.g., capital_one, chase_1)")

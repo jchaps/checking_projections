@@ -10,7 +10,7 @@ from app.projections import build_projection, find_low_points
 log = logging.getLogger(__name__)
 
 
-def build_and_send_digest(config, conn, recurring_config):
+def build_and_send_digest(config, conn, recurring_config, to=None):
     """Build and send the weekly email digest."""
     detail_days = config["digest"]["projection_days_detail"]
     lowpoint_days = config["digest"]["projection_days_lowpoint"]
@@ -23,7 +23,7 @@ def build_and_send_digest(config, conn, recurring_config):
         config["digest"].get("header", "Checking Projections — Week of {date}")
     )
     html = render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold, header)
-    send_email(html, config)
+    send_email(html, config, to=to)
 
 
 def _format_template(template):
@@ -206,31 +206,32 @@ def render_digest(projection, cc_summary, detail_days, lowpoint_days, threshold,
 </html>"""
 
 
-def send_email(html, config):
+def send_email(html, config, to=None):
     """Send the digest email via SMTP."""
     smtp_cfg = config["smtp"]
     subject = _format_template(
         config["digest"].get("subject", "Checking Projections - Week of {date}")
     )
+    recipient = to or smtp_cfg["to"]
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = smtp_cfg["from"]
-    msg["To"] = smtp_cfg["to"]
+    msg["To"] = recipient
     msg.attach(MIMEText(html, "html"))
 
     port = smtp_cfg["port"]
     if port == 465:
         with smtplib.SMTP_SSL(smtp_cfg["host"], port) as server:
             server.login(smtp_cfg["username"], smtp_cfg["password"])
-            server.sendmail(smtp_cfg["from"], smtp_cfg["to"], msg.as_string())
+            server.sendmail(smtp_cfg["from"], recipient, msg.as_string())
     else:
         with smtplib.SMTP(smtp_cfg["host"], port) as server:
             server.starttls()
             server.login(smtp_cfg["username"], smtp_cfg["password"])
-            server.sendmail(smtp_cfg["from"], smtp_cfg["to"], msg.as_string())
+            server.sendmail(smtp_cfg["from"], recipient, msg.as_string())
 
-    log.info("Digest email sent to %s", smtp_cfg["to"])
+    log.info("Digest email sent to %s", recipient)
 
 
 def _fmt(value):
