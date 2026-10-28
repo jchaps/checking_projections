@@ -1,9 +1,7 @@
-name: recurring-projections
-
 services:
-  recurring-projections:
+  checking-projections:
     build: .
-    container_name: recurring-projections
+    container_name: ${CONTAINER_NAME:-checking-projections}
     volumes:
       - ./data:/app/data
       - ./config:/app/config
