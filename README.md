@@ -275,6 +275,8 @@ tests/              # pytest suites for config, db, matcher, plaid_client, proje
 
 **"No access token for item 'xyz', skipping"** — you referenced `xyz` in `config.yaml` but never ran `link xyz`. Do that, or remove the reference.
 
+**`ITEM_LOGIN_REQUIRED` during sync** — the bank wants you to log in again (password change, new MFA, expired consent). Run `link <item> --update` to re-authenticate the existing item in place; plain `link` would create a duplicate Plaid item instead.
+
 **"Failed to decrypt token file"** — your `PLAID_ENCRYPTION_KEY` doesn't match the one used when tokens were saved. If you just generated a new key, run `encrypt-tokens` to migrate a plaintext file, or re-run `link` for each item.
 
 **"SMTP authentication failed" (535)** — for Gmail, make sure you're using an [app password](https://myaccount.google.com/apppasswords), not your account password. Port `465` requires SSL; port `587` requires STARTTLS.

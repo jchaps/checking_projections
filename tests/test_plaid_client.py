@@ -5,7 +5,9 @@ import stat
 import pytest
 from cryptography.fernet import Fernet
 
-from app.plaid_client import load_tokens, save_token, encrypt_existing_tokens, _resolve_tokens_path
+from unittest.mock import MagicMock
+
+from app.plaid_client import load_tokens, save_token, encrypt_existing_tokens, _resolve_tokens_path, create_link_token
 
 
 @pytest.fixture
@@ -134,3 +136,22 @@ class TestEncryptExistingTokens:
         monkeypatch.setenv("PLAID_TOKENS_FILE", str(data_dir / "nonexistent.json"))
         with pytest.raises(SystemExit, match="No token file found"):
             encrypt_existing_tokens(str(data_dir))
+
+
+class TestCreateLinkToken:
+    def _request(self, client):
+        return client.link_token_create.call_args.args[0]
+
+    def test_initial_link_requests_products(self):
+        client = MagicMock()
+        create_link_token(client, "cap1")
+        request = self._request(client)
+        assert [str(p) for p in request.products] == ["transactions", "liabilities"]
+        assert "access_token" not in request
+
+    def test_update_mode_passes_access_token_without_products(self):
+        client = MagicMock()
+        create_link_token(client, "cap1", access_token="access-token-123")
+        request = self._request(client)
+        assert request.access_token == "access-token-123"
+        assert "products" not in request

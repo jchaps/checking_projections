@@ -1,6 +1,7 @@
 """Minimal local HTTP server to run the Plaid Link flow in a browser."""
 
 import json
+import os
 import threading
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -105,13 +106,18 @@ def run_link_flow(link_token):
     """Start a local server, open the browser, and wait for the Plaid Link callback."""
     _result["public_token"] = None
 
-    server = HTTPServer(("127.0.0.1", PORT), LinkHandler)
+    # Bind to 0.0.0.0 inside Docker so the published port is reachable (same check as setup_server)
+    in_docker = os.path.exists("/.dockerenv") or os.getcwd() == "/app"
+    host = "0.0.0.0" if in_docker else "127.0.0.1"
+
+    server = HTTPServer((host, PORT), LinkHandler)
     server.link_token = link_token
 
     url = f"http://localhost:{PORT}"
-    print(f"Opening Plaid Link in your browser at {url}")
+    print(f"Open Plaid Link in your browser at {url}")
     print("Complete the login flow in the browser. Waiting...\n")
-    webbrowser.open(url)
+    if not in_docker:
+        webbrowser.open(url)
 
     server.serve_forever()
     server.server_close()

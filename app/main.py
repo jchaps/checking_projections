@@ -108,12 +108,24 @@ def cmd_link(args):
     client = plaid_client.create_client(config)
     item_alias = args.item
 
-    print(f"Creating link token for '{item_alias}'...")
-    link_token = plaid_client.create_link_token(client, item_alias)
+    if args.update:
+        tokens = plaid_client.load_tokens(config["data_dir"])
+        if item_alias not in tokens:
+            raise SystemExit(f"No existing access token for '{item_alias}'. Run 'link {item_alias}' without --update.")
+        print(f"Creating update-mode link token for '{item_alias}'...")
+        link_token = plaid_client.create_link_token(client, item_alias, access_token=tokens[item_alias])
+    else:
+        print(f"Creating link token for '{item_alias}'...")
+        link_token = plaid_client.create_link_token(client, item_alias)
 
     public_token = run_link_flow(link_token)
     if not public_token:
         print("Link flow was cancelled or failed.")
+        return
+
+    if args.update:
+        # The existing access token stays valid; no exchange needed
+        print(f"Login restored for '{item_alias}'. Run 'sync' to pull fresh data.")
         return
 
     access_token = plaid_client.exchange_public_token(client, public_token)
@@ -273,6 +285,8 @@ def main():
 
     link_parser = subparsers.add_parser("link", help="Link a Plaid item")
     link_parser.add_argument("item", help="Item alias (e.g., capital_one, chase_1)")
+    link_parser.add_argument("--update", action="store_true",
+                             help="Re-authenticate an existing item (fixes ITEM_LOGIN_REQUIRED)")
 
     subparsers.add_parser("balances", help="Show current balances")
     subparsers.add_parser("recurring", help="Show recurring transaction status")

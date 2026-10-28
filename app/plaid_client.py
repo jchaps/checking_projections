@@ -36,14 +36,20 @@ def create_client(config):
     return plaid_api.PlaidApi(api_client)
 
 
-def create_link_token(client, item_alias):
-    """Generate a link token for initial account linking."""
+def create_link_token(client, item_alias, access_token=None):
+    """Generate a link token for initial linking, or for update mode if access_token is given."""
+    kwargs = {}
+    if access_token:
+        # Update mode re-authenticates the existing item; products must be omitted
+        kwargs["access_token"] = access_token
+    else:
+        kwargs["products"] = [Products("transactions"), Products("liabilities")]
     request = LinkTokenCreateRequest(
         user=LinkTokenCreateRequestUser(client_user_id=f"user-{item_alias}"),
         client_name="Checking Projections",
-        products=[Products("transactions"), Products("liabilities")],
         country_codes=[CountryCode("US")],
         language="en",
+        **kwargs,
     )
     response = client.link_token_create(request)
     return response.link_token
