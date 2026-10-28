@@ -167,6 +167,26 @@ docker compose run --rm checking-projections balances
 
 Logs from the scheduler live in `docker compose logs -f checking-projections`.
 
+### The `projections` shortcut
+
+The repo includes a `projections` wrapper script so you don't have to type the full `docker compose` incantation. It runs commands in the live container (or a one-off container if it's stopped), and publishes the right port for `link` and `setup`:
+
+```bash
+./projections sync
+./projections projection --days 45
+./projections link bank_of_america --update
+./projections rebuild   # rebuild the image and restart the container
+./projections logs      # follow scheduler logs
+```
+
+Symlink it onto your `PATH` to run it from anywhere — it always resolves back to its own install directory:
+
+```bash
+ln -s "$PWD/projections" /usr/local/bin/projections
+```
+
+If you run more than one install on the same machine, give each a root `.env` with distinct `COMPOSE_PROJECT_NAME` and `CONTAINER_NAME` values; the script and `docker-compose.yml` both honor them.
+
 ### Editing bills and cards
 
 The easiest way to make changes is to re-run the setup wizard:
@@ -269,6 +289,7 @@ app/
   digest.py         # HTML email rendering and SMTP send
   config.py         # YAML loading and validation
 tests/              # pytest suites for config, db, matcher, plaid_client, projections
+projections         # CLI wrapper around docker compose / docker exec
 ```
 
 ## Troubleshooting

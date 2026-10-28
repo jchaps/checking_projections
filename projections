@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Shorthand for running app commands against this install's container.
+#
+#   ./projections sync
+#   ./projections projection --days 45
+#   ./projections link bank_of_america --update
+#   ./projections rebuild      # rebuild image and restart the container
+#   ./projections logs         # follow container logs
+#
+# Symlink it onto your PATH to run from anywhere, e.g.
+#   ln -s "$PWD/projections" /usr/local/bin/projections
+set -e
+
+# Resolve symlinks so compose runs from this install's directory
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  TARGET="$(readlink "$SCRIPT")"
+  case "$TARGET" in
+    /*) SCRIPT="$TARGET" ;;
+    *)  SCRIPT="$(dirname "$SCRIPT")/$TARGET" ;;
+  esac
+done
+cd "$(dirname "$SCRIPT")"
+
+SERVICE="checking-projections"
+CONTAINER="checking-projections"
+# Per-install override (see docker-compose.yml)
+if [ -f .env ]; then
+  ENV_CONTAINER="$(sed -n 's/^CONTAINER_NAME=//p' .env | tail -1)"
+  [ -n "$ENV_CONTAINER" ] && CONTAINER="$ENV_CONTAINER"
+fi
+
+TTY_FLAGS="-i"
+[ -t 0 ] && [ -t 1 ] && TTY_FLAGS="-it"
+
+case "$1" in
+  ""|-h|--help|help)
+    docker compose run --rm "$SERVICE" --help
+    echo
+    echo "Script-only commands: rebuild, logs"
+    ;;
+  rebuild)
+    docker compose up -d --build
+    ;;
+  logs)
+    docker compose logs -f
+    ;;
+  link)
+    # Plaid Link flow needs its port published, so use a one-off container
+    docker compose run --rm -p 8484:8484 "$SERVICE" "$@"
+    ;;
+  setup)
+    docker compose run --rm -p 8485:8485 "$SERVICE" "$@"
+    ;;
+  *)
+    if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then
+      docker exec $TTY_FLAGS "$CONTAINER" python -m app.main "$@"
+    else
+      docker compose run --rm "$SERVICE" "$@"
+    fi
+    ;;
+esac
